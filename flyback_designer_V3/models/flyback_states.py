@@ -148,7 +148,13 @@ class FlybackState:
     strands_s2: int = 0             # number of strands in the secondary wire 2
     Daux: float = 0.0               # auxiliary wire diameter
     Saux_eff: float = 0.0           # effective cross-sectional area of the auxiliary wire
-    strands_aux: int = 0            # number of strands in the auxiliary wire
+    strands_aux: int = 0            # number of strands in the auxiliary wire  
+
+    delta_cm: float = 0.0           # skin depth in cm
+    D_awg_max_: float = 0.0         # Maximum AWG diameter to avoid the skin effect
+    s_w_: float = 0.0               # Bare wire section based on the skin effect (reference for the number of strands)
+    Aw_used: float = 0.0            # Window area used for the winding
+    fits_in_core: bool = False      # Does the total copper area fit within the core window area (Aw)?
 
     AWG_pri:     str   = ""
     AWG_sec:     str   = ""
@@ -307,6 +313,11 @@ class FlybackResults:
     Daux_calc: float = 0.0               # auxiliary wire diameter
     Saux_eff_calc: float = 0.0           # effective cross-sectional area of the auxiliary wire
     strands_aux_calc: int = 0            # number of strands in the auxiliary wire
+
+    D_awg_max_calc: float = 0.0          # Maximum AWG diameter to avoid the skin effect
+    s_w_calc: float = 0.0                # Bare wire section based on the skin effect (reference for the number of strands)
+    Aw_used_calc: float = 0.0            # Window area used for the winding
+    fits_in_core_calc: bool = False      # Does the total copper area fit within the core window area (Aw)?
 
     AWG_pri_calc:     str   = ""
     AWG_sec_calc:     str   = ""

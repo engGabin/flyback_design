@@ -1,6 +1,8 @@
 # =======================================================
 # File : test_calc_engine.py
-# Description : Script de test pour valider les équations du Flyback
+# Author : Gabin SBAFFI
+# Date : 2026-08-02
+# Description : Test script to validate the Flyback equations.
 # =======================================================
 
 import sys

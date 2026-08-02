@@ -5,6 +5,11 @@ X créer deux classes :
     une classe pour les valeurs fixes finales 
     une classe pour les calculs 
 - vérifier les possibles erreurs mathématiques et les traiter pour avoir un fichier robuste
+- state.v_bulk_min : ATTENTION qu'il ne soit pas à 0 pour les calculs 
+- skin depth acutellement uniquement pour cuivre -> il faudrait généraliser pour le type de matériaux 
+    créer une database avec matériaux et leurs coefficients associés 
+- rajouter le calculs des courants i_s2_... et i_aux_...
+- revoir calculs pour Daux, Saux_eff, car il peut y avoir des problèmes au niveau des courants (RMS trop petits)
 
 VARIABLE A AJOUTER :
     X vor_calc

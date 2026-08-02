@@ -174,3 +174,74 @@ def calc_flybackState(state: FlybackState, result: FlybackResults):
                                                          (state.r_ds_on * state.p_in))
     state.D_out = ((state.v_bulk_min - state.vds_on) * state.D_max) / (state.vor)
     state.D_m = 1- state.D_max - state.D_out
+
+def calc_wire_sections(state: FlybackState, result: FlybackResults):
+    """Calculates the different wire diameters, sections and number of strands required for primary, secondary and auxiliary windings, 
+            taking into account the skin effect.
+            Checks if the total windings fit in the core window area (Aw).
+    Arguments: FlybackResults (store results) - FlybackState (parameters)
+    Returns: 
+        Results -> D_awg_max_calc, s_w_calc, S(p,s1,s2,aux)_eff_calc, D(p,s1,s2,aux)_calc, strands_(p,s1,s2,aux)_calc
+        State -> delta_cm
+    """
+    # ---------------------------------------------------------
+    # 1. Skin depth calculation
+    # ---------------------------------------------------------
+    # for copper: delta = 6.62 / sqrt(f_sw) [en cm]
+    state.delta_cm = 6.62 / math.sqrt(state.f_sw)
+    delta_mm = state.delta_cm * 10.0
+    
+    # Diamètre AWG max pour éviter l'effet de peau
+    result.D_awg_max_calc = 2 * delta_mm
+    result.s_w_calc = (math.pi * (result.D_awg_max_calc**2)) / 4.0
+
+    # ---------------------------------------------------------
+    # 2. Primary
+    # ---------------------------------------------------------
+    result.Sp_eff_calc = state.i_p_rms / state.J_max
+    result.Dp_calc = math.sqrt((4 * result.Sp_eff_calc) / math.pi)
+    result.strands_p_calc = math.ceil(result.Sp_eff_calc / result.s_w_calc)
+
+    # ---------------------------------------------------------
+    # 3. Secondary 1
+    # ---------------------------------------------------------
+    result.Ss1_eff_calc = state.i_s_rms / state.J_max
+    result.Ds1_calc = math.sqrt((4 * result.Ss1_eff_calc) / math.pi)
+    result.strands_s1_calc = math.ceil(result.Ss1_eff_calc / result.s_w_calc)
+
+    # ---------------------------------------------------------
+    # 4. Secondary 2
+    # ---------------------------------------------------------
+    result.Ss2_eff_calc = state.i_s_rms / state.J_max
+    result.Ds2_calc = math.sqrt((4 * result.Ss2_eff_calc) / math.pi)
+    result.strands_s2_calc = math.ceil(result.Ss2_eff_calc / result.s_w_calc)
+
+    # ---------------------------------------------------------
+    # 5. Auxiliary
+    # ---------------------------------------------------------
+    # It is often assumed that the auxiliary current is low (e.g., controller power supply)
+    i_aux_rms = state.i_aux * math.sqrt(state.D_max) if hasattr(state, 'i_aux') else 0.1
+    result.Saux_eff_calc = i_aux_rms / state.J_max
+    if result.Saux_eff_calc > 0:
+        result.Daux_calc = math.sqrt((4 * result.Saux_eff_calc) / math.pi)
+        result.strands_aux_calc = math.ceil(result.Saux_eff_calc / result.s_w_calc)
+    else:
+        result.Daux_calc = 0.0
+        result.strands_aux_calc = 1
+    if result.strands_aux_calc == 0: result.strands_aux_calc = 1
+
+def check_core_window_fit(state: FlybackState, result: FlybackResults):
+    """Checks if the total copper area of the windings fits within the core window area (Aw).
+    Arguments: FlybackResults (store results) - FlybackState (parameters)
+    Returns: 
+        Results -> Aw_calc, fits_in_core
+        State -> NONE
+    """  
+    # On calcule la surface totale de cuivre théorique
+    result.Aw_used_calc = (state.Np * result.Sp_eff_calc + 
+                         state.Ns1 * result.Ss1_eff_calc + 
+                         state.Ns2 * result.Ss2_eff_calc +
+                         state.Naux * result.Saux_eff_calc) * state.kb
+    
+    # Check if the total copper area fits within the core window area (Aw)
+    result.fits_in_core_calc = result.Aw_used_calc <= state.Aw 
