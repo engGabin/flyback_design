@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication
-from models.design_state import DesignState
+from flyback_designer_V3.models.flyback_states import FlybackState
 from flyback_designer_V2.models.calc_engine import recalc_all
 
 class FlybackController:
@@ -10,7 +10,7 @@ class FlybackController:
     """
     def __init__(self):
         # 1. Création de la mémoire (Le Modèle)
-        self.state = DesignState()
+        self.state = FlybackState()
         
         # 2. Création de l'application graphique (La Vue)
         self.app = QApplication(sys.argv)

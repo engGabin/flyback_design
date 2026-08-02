@@ -5,15 +5,15 @@
 # Description : this file is a test script to verify the functionality of the calculation engine linked to the design_state.py file.
 # =======================================================
 
-from models.design_state import DesignState
-from flyback_designer_V2.models.calc_engine import *
+from flyback_designer_V3.models.flyback_states import FlybackState
+from flyback_designer_V3.models.calc_engine import *
 
 def tester_mon_moteur():
     print("=== DÉBUT DU TEST DU MOTEUR FLYBACK ===\n")
 
     # 1. Création de la 'mémoire' vierge
     print("1. Initialisation de la mémoire (DesignState)...")
-    etat = DesignState()
+    etat = FlybackState()
     print(f"   -> Valeurs par défaut : Pout = {etat.p_out1} W, C_bulk = {etat.c_bulk*1e6} µF")
 
     # 2. Premier calcul avec les valeurs par défaut

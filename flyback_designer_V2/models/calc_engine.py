@@ -1,3 +1,10 @@
+# =======================================================
+# File : calc_engine.py
+# Author : Gabin SBAFFI
+# Date : 2026-07-29
+# Description : this file is the calculation engine of the flyback designer application.
+# =======================================================
+
 import math
 from models.design_state import DesignState
 
@@ -45,20 +52,21 @@ def recalc_all(state: DesignState):
         state.v_bulk_min = math.sqrt(voltage_part - discharge_part)
     else:
         state.v_bulk_min = 0.0
+        return print(f"Erreur : le condensateur est trop petit, v_bulk_min = {state.v_bulk_min}")
         # Error: the capacitor is too small to hold the charge
 
     # ---------------------------------------------------------
     # Pre-Design Calculation
     # ---------------------------------------------------------
-    state.vor = (state.D_max * state.v_bulk_min)/(1 - state.D_max)
-    state.vds_on = (state.v_bulk_min + state.vor)/(1 + (state.v_bulk_min * state.vor)/(state.r_ds_on * state.p_in))
+    state.vor_calc = (state.D_max * state.v_bulk_min)/(1 - state.D_max)
+    state.vds_on = (state.v_bulk_min + state.vor_calc)/(1 + (state.v_bulk_min * state.vor_calc)/(state.r_ds_on * state.p_in))
     state.Lp_calc = ((((state.v_bulk_min - state.vds_on)**2 * state.D_max**2) / 
                     (state.p_in * state.f_sw * state.Krp))) * (1 - state.Krp/2)
 
     #---------------------------------------------------------
     # First current estimations 
     #---------------------------------------------------------
-    state.Np_Ns1_calc = state.vor / (state.v_out1 + state.v_F)
+    state.Np_Ns1_calc = state.vor_calc / (state.v_out1 + state.v_F)
     state.i_p_avg = state.p_out_total / (state.v_bulk_min * state.eta)
     state.i_p_avg_on = state.p_out_total / (state.v_bulk_min * state.eta * state.D_max)
     state.i_p_max = state.p_in / ((state.v_bulk_min * state.D_max)*(1 - state.Krp/2))
@@ -68,7 +76,7 @@ def recalc_all(state: DesignState):
     state.i_p_dc = state.D_max * state.i_p_max/2
     state.i_p_ac = math.sqrt(state.i_p_rms**2 - state.i_p_dc**2)
 
-    state.D_out = ((state.v_bulk_min - state.vds_on) * state.D_max) / (state.vor)
+    state.D_out = ((state.v_bulk_min - state.vds_on) * state.D_max) / (state.vor_calc)
     state.i_s_max = (2 * state.i_out1)/(state.D_out * (2 - state.Krp))
     state.i_s_rms = state.i_s_max * math.sqrt(state.D_out * (state.Krp**2 /3 - state.Krp + 1))
 

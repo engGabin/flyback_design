@@ -4,7 +4,7 @@
 # Description : module for imports and initializations
 # =======================================================
 
-# flyback_designer_V2/models/__init__.py
+# flyback_designer_V3/models/__init__.py
 
-from .design_state import DesignState
+from .flyback_states import *
 from .calc_engine import *

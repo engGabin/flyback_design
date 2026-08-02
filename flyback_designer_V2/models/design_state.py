@@ -52,7 +52,8 @@ class DesignState:
     V_mosfet:       float = 1000.0  # V  — MOSFET voltage rating
     controller_ref: str   = ""      # e.g. "ICE2QR4565G"
     mosfet_ref:     str   = ""      # e.g. "IPW90R120C3"
-    vds_on: float = 0.0            # voltage across the primary switch when it is on
+    vds_on: float = 0.0             # voltage across the primary switch when it is on
+    vds_on_calc: float = 0.0        # calculated voltage across the primary switch when it is on
 
     # ========================================================
     # 2. PRE-DESIGN CHOICES 
@@ -77,7 +78,7 @@ class DesignState:
     # ========================================================
     # 4. TRANSFORMER (user + computed)
     # ========================================================
-    vor: float = 0.0               # reflected voltage on the primary side
+    vor_calc: float = 0.0               # reflected voltage on the primary side
     Lp: float = 0.0
     Np: float = 11.10               # primary turns
     Ns1: float = 1.0                # secondary turns 1
@@ -90,6 +91,7 @@ class DesignState:
     Fringing: float = 0.0           # fringing flux factor   
 
     # Computed
+    vor_calc: float = 0.0           # reflected voltage on the primary side 
     Lp_calc: float = 0.0            # primary inductance
     Lp_real: float = 0.0            # real primary inductance
     Np_calc: float = 0.0            # primary turns
@@ -133,14 +135,14 @@ class DesignState:
     i_p_dc: float = 0.0            # DC component of the primary current
     i_p_ac: float = 0.0            # AC component of the primary current
 
-    i_p_max1: float = 0.0          
-    i_p_rms1: float = 0.0
-    i_p_avg1: float = 0.0
-    i_p_avg_on1: float = 0.0
-    delta_i_p1: float = 0.0
-    i_p_valley1: float = 0.0
-    i_p_dc1: float = 0.0
-    i_p_ac1: float = 0.0  
+    i_p_max_calc: float = 0.0          
+    i_p_rms_calc: float = 0.0
+    i_p_avg_calc: float = 0.0
+    i_p_avg_on_calc: float = 0.0
+    delta_i_p_calc: float = 0.0
+    i_p_valley_calc: float = 0.0
+    i_p_dc_calc: float = 0.0
+    i_p_ac_calc: float = 0.0  
 
     # ========================================================
     # 7. SECONDARY CURRENTS (computed)
@@ -155,8 +157,8 @@ class DesignState:
     i_aux: float = 0.0             # auxiliary output current   
 
     # Variables for second calculations with the value of the primary inductance
-    i_s_max1: float = 0.0
-    i_s_rms1: float = 0.0
+    i_s_max_calc: float = 0.0
+    i_s_rms_calc: float = 0.0
 
     # ========================================================
     # 8. WIRE SELECTION (user + computed)
