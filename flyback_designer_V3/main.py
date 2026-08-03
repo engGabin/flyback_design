@@ -1,57 +1,81 @@
+"""
+main.py — Application entry point.
+
+Usage:
+    python main.py
+
+Requirements:
+    pip install PyQt6 pyqtgraph matplotlib PySpice
+
+Optional (for LTSpice netlist simulation):
+    pip install PySpice
+    LTSpice XVII installed and on PATH
+"""
+
 import sys
+import os
+
+# Ensure the project root is on sys.path so `engine` and `ui` import cleanly
+sys.path.insert(0, os.path.dirname(__file__))
+
 from PyQt6.QtWidgets import QApplication
-from flyback_designer_V3.models.flyback_states import FlybackState
-from flyback_designer_V2.models.calc_engine import recalc_all
+from PyQt6.QtCore    import Qt
+from PyQt6.QtGui     import QFont, QPalette, QColor
 
-class FlybackController:
-    """
-    LE CONTRÔLEUR (MVC)
-    Il fait le lien entre la fenêtre (Vue) et les mathématiques (Modèle).
-    """
-    def __init__(self):
-        # 1. Création de la mémoire (Le Modèle)
-        self.state = FlybackState()
-        
-        # 2. Création de l'application graphique (La Vue)
-        self.app = QApplication(sys.argv)
-        self.app.setStyle("Fusion") # Applique un thème moderne par défaut
-        self.window = MainWindow(self.state)
-        
-        # 3. Connexion des événements (Le Câblage)
-        # Quand on clique sur le bouton "Appliquer" de l'étape 1, ça lance notre fonction 'on_step1_apply'
-        self.window.page_step1.btn_apply.clicked.connect(self.on_step1_apply)
-        
-    def on_step1_apply(self):
-        """Fonction déclenchée par le bouton de l'étape 1."""
-        print("\n--- Lancement des calculs ---")
-        
-        # A. On lit les valeurs tapées à l'écran et on les met dans la mémoire
-        page = self.window.page_step1
-        self.state.specs.vac_min = page.inp_vac_min.value
-        self.state.specs.vac_max = page.inp_vac_max.value
-        self.state.specs.vout = page.inp_vout.value
-        self.state.specs.pout = page.inp_pout.value
-        self.state.specs.eta = page.inp_eta.value
-        self.state.specs.f_line = page.inp_fline.value
-        
-        # B. On lance la grosse calculatrice (calc_engine.py)
-        recalc_all(self.state)
-        
-        # C. Mise à jour de l'interface (Cases grises de résultat)
-        page.update_results()
-        
-        # D. On affiche le résultat de l'étape 2 (Calculs en arrière-plan) dans la console Python pour vérifier !
-        print(f"Puissance d'entrée : {self.state.specs.pin:.2f} W")
-        print(f"Vbulk Maximum      : {self.state.specs.vbulk_max:.2f} V")
-        print(f"Vbulk Minimum      : {self.state.specs.vbulk_min:.2f} V")
-        print("-----------------------------\n")
+from app.main_window  import MainWindow
 
-    def run(self):
-        """Affiche la fenêtre et lance la boucle de l'application."""
-        self.window.show()
-        sys.exit(self.app.exec())
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("Flyback Designer")
+    app.setOrganizationName("SOCOMEC")
+
+    # Consistent font across platforms
+    font = QFont("Segoe UI", 10)
+    app.setFont(font)
+
+    # High-DPI support (Qt6 enables this by default, explicit for clarity)
+    app.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
+    # ---------------------------------------------------------
+    # NEW COLOR PALETTE (Fusion + QPalette)
+    # ---------------------------------------------------------
+    # Palette: 
+    # 0D1321 (Very Dark Blue)
+    # 1D2D44 (Dark Blue)
+    # 3E5C76 (Medium Blue)
+    # 748CAB (Light Blueish Gray)
+    # F0EBD8 (Cream / Off-White)
+
+    app.setStyle("Fusion")
+    dark_palette = QPalette()
+    dark_palette.setColor(QPalette.ColorRole.Window, QColor("#1D2D44"))
+    dark_palette.setColor(QPalette.ColorRole.WindowText, QColor("#F0EBD8"))
+    dark_palette.setColor(QPalette.ColorRole.Base, QColor("#0D1321"))
+    dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#1D2D44"))
+    dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor("#1D2D44"))
+    dark_palette.setColor(QPalette.ColorRole.ToolTipText, QColor("#F0EBD8"))
+    dark_palette.setColor(QPalette.ColorRole.Text, QColor("#F0EBD8"))
+    dark_palette.setColor(QPalette.ColorRole.Button, QColor("#3E5C76"))
+    dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor("#F0EBD8"))
+    dark_palette.setColor(QPalette.ColorRole.BrightText, QColor("#748CAB"))
+    dark_palette.setColor(QPalette.ColorRole.Link, QColor("#748CAB"))
+    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor("#3E5C76"))
+    dark_palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#F0EBD8"))
+    app.setPalette(dark_palette)
+    
+    # Global stylesheet for specific tweaks
+    app.setStyleSheet("""
+        QToolTip { color: #F0EBD8; background-color: #3E5C76; border: 1px solid #748CAB; }
+    """)
+    # ---------------------------------------------------------
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec())
+
 
 if __name__ == "__main__":
-    # Démarre tout
-    controller = FlybackController()
-    controller.run()
+    main()

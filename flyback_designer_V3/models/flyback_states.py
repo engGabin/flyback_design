@@ -23,10 +23,13 @@ class FlybackState:
 
     p_out1: float = 7.0            # Output power 1 [W]
     v_out1: float = 12.0           # Output voltage 1 [V]
+    i_out1: float = 0.0            # Output current 1 [A]
     p_out2: float = 0.0            # Output power 2 [W]
     v_out2: float = 0.0            # Output voltage 2 [V]
+    i_out2: float = 0.0            # Output current 2 [A]
     p_aux: float = 0.0             # Auxiliary output power [W]
     v_aux: float = 0.0             # Auxiliary output voltage [V]
+    i_aux: float = 0.0             # Auxiliary output current [A]
 
     p_out_total: float = 0.0
     p_in: float = 0.0    
@@ -217,6 +220,41 @@ class FlybackState:
             self.kb = 1 / self.Ku
             self.AeAw_real = self.Ae * self.Aw
             self.signals = DesignStateSignals()
+    
+    def notify(self, section: str = "all"):
+        """
+        Emit the appropriate signal after a section's values change.
+        Also always emits any_changed for global listeners (e.g. status bar).
+        """
+        sig_map = {
+            "input_specs":   self.signals.input_specs_changed,
+            "input_stage":   self.signals.input_stage_changed,
+            "structure":     self.signals.structure_changed,
+            "transformer":   self.signals.transformer_changed,
+            "waveforms":     self.signals.waveforms_changed,
+            "wire_sections": self.signals.wire_sections_changed,
+            "losses":        self.signals.losses_changed,
+            "snubber":       self.signals.snubber_changed,
+            "output_stage":  self.signals.output_stage_changed,
+        }
+        if section in sig_map:
+            sig_map[section].emit()
+        self.signals.any_changed.emit()
+
+    def to_dict(self) -> dict:
+        """Serialise to plain dict (for JSON project file)."""
+        import dataclasses
+        d = dataclasses.asdict(self)
+        d.pop("signals", None)
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "FlybackState":
+        """Restore from a plain dict (loaded from JSON project file)."""
+        import dataclasses
+        fields = {f.name for f in dataclasses.fields(cls)}
+        filtered = {k: v for k, v in d.items() if k in fields}
+        return cls(**filtered)
 
 @dataclass
 class FlybackResults:
@@ -392,37 +430,4 @@ class DesignStates:
         self.results = FlybackResults()
         self.signals = DesignStateSignals()
     
-    def notify(self, section: str = "all"):
-        """
-        Emit the appropriate signal after a section's values change.
-        Also always emits any_changed for global listeners (e.g. status bar).
-        """
-        sig_map = {
-            "input_specs":   self.signals.input_specs_changed,
-            "input_stage":   self.signals.input_stage_changed,
-            "structure":     self.signals.structure_changed,
-            "transformer":   self.signals.transformer_changed,
-            "waveforms":     self.signals.waveforms_changed,
-            "wire_sections": self.signals.wire_sections_changed,
-            "losses":        self.signals.losses_changed,
-            "snubber":       self.signals.snubber_changed,
-            "output_stage":  self.signals.output_stage_changed,
-        }
-        if section in sig_map:
-            sig_map[section].emit()
-        self.signals.any_changed.emit()
-
-    def to_dict(self) -> dict:
-        """Serialise to plain dict (for JSON project file)."""
-        import dataclasses
-        d = dataclasses.asdict(self)
-        d.pop("signals", None)
-        return d
-
-    @classmethod
-    def from_dict(cls, d: dict) -> "FlybackState":
-        """Restore from a plain dict (loaded from JSON project file)."""
-        import dataclasses
-        fields = {f.name for f in dataclasses.fields(cls)}
-        filtered = {k: v for k, v in d.items() if k in fields}
-        return cls(**filtered)    
+        

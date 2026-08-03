@@ -11,6 +11,8 @@ X créer deux classes :
 - rajouter le calculs des courants i_s2_... et i_aux_...
 - revoir calculs pour Daux, Saux_eff, car il peut y avoir des problèmes au niveau des courants (RMS trop petits)
 
+- export vers un fichier csv xml ou autre
+
 VARIABLE A AJOUTER :
     X vor_calc
     X vds_on

@@ -9,7 +9,7 @@ Computed I_out and P_in are shown as read-only results.
 from PyQt6.QtWidgets import QPushButton, QHBoxLayout
 from PyQt6.QtCore    import Qt
 
-from ..widgets.common import PageBase, LabeledInput, ResultRow, SectionHeader
+from widgets.common import PageBase, LabeledInput, ResultRow, SectionHeader
 from engine.calc_engine import recalc_all
 
 
