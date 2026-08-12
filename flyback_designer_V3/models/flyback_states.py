@@ -55,6 +55,11 @@ class FlybackState:
     controller_ref: str   = ""      # e.g. "ICE2QR4565G"
     mosfet_ref:     str   = ""      # e.g. "IPW90R120C3"
     vds_on: float = 0.0             # voltage across the primary switch when it is on
+    r_ds_on: float = 0.62          # ON resistance of the primary switch [Ohm]
+    MOS_Eoss: float = 0.0
+    MOS_r_th: float = 0.0
+    MOS_ton: float = 0.0
+    MOS_toff: float = 0.0
 
     # ========================================================
     # 4. PRE-DESIGN CHOICES 
@@ -89,6 +94,7 @@ class FlybackState:
     Lp_real: float = 0.0  
     vor: float = 0.0                # reflected voltage on the primary side
     B_max_real: float = 0.0              # maximum flux density
+    AeAw_calc: float = 0.0          # area product
     Np_Ns1: float = 0.0             # turns ratio primary to secondary 1
     Np_Ns2: float = 0.0             # turns ratio primary to secondary 2
     Np_Naux: float = 0.0            # turns ratio primary to auxiliary  
@@ -113,6 +119,11 @@ class FlybackState:
     # Variable dépendante
     AeAw_real: float = 0.0
 
+    lp: float = 0.0             # length of the primary coil
+    ls1: float = 0.0            # length of the first secondary coil
+    ls2: float = 0.0            # length of the second secondary coil
+    laux: float = 0.0           # length of the auxiliary coil
+
     # ========================================================
     # 8. PRIMARY CURRENTS (computed)
     # ========================================================
@@ -131,8 +142,12 @@ class FlybackState:
     D_out: float = 0.0             # duty cycle of the secondary side
     D_m: float = 0.0               # duty cycle linked to dead time
 
-    i_s_max: float = 0.0           # maximum secondary current
-    i_s_rms: float = 0.0           # RMS secondary current
+    i_s1_max: float = 0.0           # maximum secondary current
+    i_s1_rms: float = 0.0           # RMS secondary current
+    i_s1_valley: float = 0.0        # secondary current valley
+    delta_i_s1: float = 0.0         # secondary current ripple
+    i_s1_dc: float = 0.0            # DC component of the secondary current
+    i_s1_ac: float = 0.0            # AC component of the secondary current 
     i_out1: float = 0.0            # output current 1
     i_out2: float = 0.0            # output current 2
     i_aux: float = 0.0             # auxiliary output current   
@@ -171,15 +186,54 @@ class FlybackState:
     mu_0: float = 4 * math.pi * 1e-7    # H/m — permeability of free space 
     mu_r_nonMagnetic: float = 1.0       # relative permeability of non-magnetic materials
 
-    P_sw:float = 0.0                    # W — switching losses (MOSFET)
-    P_cond: float = 0.0                 # W — conduction losses (MOSFET)
-    P_diode:     float = 0.0            # W — output diode losses
+    r_dc_p: float = 0.0                 # Ω — dc resistance of the primary coil
+    r_dc_s1: float = 0.0                # Ω — dc resistance of the secondary coil 1
+    r_dc_s2: float = 0.0                # Ω — dc resistance of the secondary coil 2
+    r_dc_aux: float = 0.0               # Ω — dc resistance of the auxiliary coil
 
+    r_ac_p: float = 0.0                 # Ω — ac resistance of the primary coil
+    r_ac_s1: float = 0.0                # Ω — ac resistance of the secondary coil 1
+    r_ac_s2: float = 0.0                # Ω — ac resistance of the secondary coil 2
+    r_ac_aux: float = 0.0               # Ω — ac resistance of the auxiliary coil
+
+    # Dowell coefficients based on the diameters, the frequencies and the layers
+    K_ac_p: float = 0.0                 # Coefficient of the ac resistance of the primary coil
+    K_ac_s1: float = 0.0                # Coefficient of the ac resistance of the secondary coil 1
+    K_ac_s2: float = 0.0                # Coefficient of the ac resistance of the secondary coil 2
+    K_ac_aux: float = 0.0               # Coefficient of the ac resistance of the auxiliary coil
+
+    # Core losses
+    delta_B_dcm: float = 0.0            # Wb/m² — flux density in DCM
+    delta_B_ccm: float = 0.0            # Wb/m² — flux density in DCM
+    B_ac: float = 0.0                   
+    k: float = 0.0                      # Core loss coefficient
+    alpha: float = 0.0                  # Core loss exponent for frequency
+    beta: float = 0.0                   # Core loss exponent for flux density
     Pfe: float = 0.0                    # W — core losses
+    
+    # Copper losses
     P_cu_p: float = 0.0                 # W — primary copper losses 
     P_cu_s1: float = 0.0                # W — secondary copper losses 1
     P_cu_s2: float = 0.0                # W — secondary copper losses 2
     P_cu_aux: float = 0.0               # W — auxiliary copper losses
+    P_cu_total: float = 0.0             # W — total copper losses
+
+    # MOSFET losses
+    P_sw:float = 0.0                    # W — switching losses (MOSFET)
+    P_cond: float = 0.0                 # W — conduction losses (MOSFET)
+    P_coss: float = 0.0                 # W — Coss losses (MOSFET)
+    P_sw_off: float = 0.0               # W — Switching losses - turn off (MOSFET)
+    P_sw_on: float = 0.0                # W — Switching losses - turn on (MOSFET)
+    P_mosfet: float = 0.0               # W - Total losses of the MOSFET
+    MOS_Tj: float = 0.0                 # °C - Junction temperature (<150°C)
+    
+    # Diodes losses
+    P_diode:     float = 0.0            # W — output diode losses
+
+    # Capacitors losses
+    P_c_out1: float = 0.0
+    P_c_out2: float = 0.0
+    P_c_bulk: float = 0.0
 
     P_total_loss:float = 0.0            # W — total estimated losses
     eta_actual:  float = 0.0            # — — actual efficiency estimate
@@ -197,12 +251,16 @@ class FlybackState:
     # ========================================================
     # 13. OUTPUT STAGE (user + computed) 
     # ========================================================
-    v_F: float = 0.7            # V  — output diode forward voltage
-    I_diode_avg: float = 0.0    # A  — average diode current
+    v_F: float = 0.7                # V  — output diode forward voltage
+    I_diode_avg: float = 0.0        # A  — average diode current
     diode_ref:   str   = ""
-    C_out:       float = 0.0    # µF — output capacitor
-    C_out_esr:   float = 0.0    # mΩ — output cap ESR
-    V_ripple:    float = 0.0    # mV — output voltage ripple
+    C_out1:       float = 0.0       # µF — output capacitor 1
+    C_out1_esr:   float = 0.0       # mΩ — output cap ESR 1
+    delta_Vout1:    float = 0.0     # %  — output voltage ripple 1
+    C_out2:       float = 0.0       # µF — output capacitor 2
+    C_out2_esr:   float = 0.0       # mΩ — output cap ESR 2
+    delta_Vout2:    float = 0.0     # %  — output voltage ripple 2
+
     has_postfilter: bool = False
     L_pf:        float = 0.0    # µH — post-filter inductance
     C_pf:        float = 0.0    # µF — post-filter capacitor
@@ -210,7 +268,7 @@ class FlybackState:
     # ========================================================
     # DATASHEET PARAMETERS
     # ========================================================
-    r_ds_on: float = 0.62          # ON resistance of the primary switch [Ohm]
+    cap_ESR: float = 0.0 
   
     def __post_init__(self):
             """
@@ -231,7 +289,7 @@ class FlybackState:
             "input_stage":   self.signals.input_stage_changed,
             "structure":     self.signals.structure_changed,
             "transformer":   self.signals.transformer_changed,
-            "waveforms":     self.signals.waveforms_changed,
+            "transformer_recap": self.signals.transformer_recap_changed,
             "wire_sections": self.signals.wire_sections_changed,
             "losses":        self.signals.losses_changed,
             "snubber":       self.signals.snubber_changed,
@@ -272,6 +330,7 @@ class FlybackResults:
     v_bulk_min_calc: float = 0.0        # minimum bulk voltage based on the voltage drop across a capacitor
     v_bulk_min_nH_calc: float = 0.0     # minimum bulk voltage based on the voltage drop across a capacitor with hold-up
     c_bulk_calc: float = 0.0            # Input bulk capacitor [F]
+    c_bulk_std: float = 0.0             # Standard input bulk capacitor [F]
     delta_T_calc: float = 0.0         
     t_d_calc: float = 0.0               # discharge time of the bulk capacitor
     t_d_nH_calc: float = 0.0            # discharge time of the bulk capacitor without hold-up  
@@ -298,8 +357,10 @@ class FlybackResults:
     Ns2_calc: float = 0.0                # secondary turns 2
     Naux_calc: float = 0.0               # auxiliary turns
 
-    Lp_calc: float = 0.0
-    Lp_real_calc: float = 0.0    
+    AeAw_calc: float = 0.0               # effective cross section area times window area
+
+    Lp_calc: float = 0.0                 # inductance  
+    Lp_real_calc: float = 0.0            # inductance real
     vor_calc: float = 0.0                # reflected voltage on the primary side
     B_max_real_calc: float = 0.0         # flux density
     Np_Ns1_calc: float = 0.0             # turns ratio primary to secondary 1
@@ -413,7 +474,7 @@ class DesignStateSignals(QObject):
     input_stage_changed   = pyqtSignal()
     structure_changed     = pyqtSignal()
     transformer_changed   = pyqtSignal()
-    waveforms_changed     = pyqtSignal()
+    transformer_recap_changed = pyqtSignal()
     wire_sections_changed = pyqtSignal()
     losses_changed        = pyqtSignal()
     snubber_changed       = pyqtSignal()

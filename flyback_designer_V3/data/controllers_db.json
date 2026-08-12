@@ -1,0 +1,58 @@
+[
+    {
+        "ref": "ICE2QR4565G",
+        "manuf": "Infineon",
+        "v_max": 800,
+        "package": "DIP8",
+        "psr": true,
+        "notes": "StackFET, 65 kHz, 4 W OB"
+    },
+    {
+        "ref": "ICE5QR4780AG",
+        "manuf": "Infineon",
+        "v_max": 800,
+        "package": "DIP8",
+        "psr": true,
+        "notes": "StackFET, 80 kHz, 5 W OB"
+    },
+    {
+        "ref": "VIPER35HD",
+        "manuf": "ST",
+        "v_max": 800,
+        "package": "DIP8",
+        "psr": true,
+        "notes": "StackFET, 60 kHz"
+    },
+    {
+        "ref": "VIPER35LD",
+        "manuf": "ST",
+        "v_max": 800,
+        "package": "SOP8",
+        "psr": true,
+        "notes": "StackFET, 60 kHz SMD"
+    },
+    {
+        "ref": "NCP1379",
+        "manuf": "ON Semi",
+        "v_max": 600,
+        "package": "SOP8",
+        "psr": false,
+        "notes": "CRM/DCM, external MOSFET"
+    },
+    {
+        "ref": "LNK306P",
+        "manuf": "PI",
+        "v_max": 700,
+        "package": "DIP8",
+        "psr": true,
+        "notes": "LinkSwitch, 360 mA max"
+    },
+    {
+        "ref": "TEA1721",
+        "manuf": "NXP",
+        "v_max": 800,
+        "package": "DIP8",
+        "psr": false,
+        "notes": "SSR, external MOSFET"
+    }
+]

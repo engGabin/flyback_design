@@ -33,11 +33,11 @@ from models.flyback_states  import *
 from models.calc_engine   import *
 
 from app.pages  import (
-    InputSpecsPage, InputStagePage, StructurePage,
-    TransformerPage, WaveformsPage, WireSectionsPage,
+    InputSpecsPage, PreDesignPage, StructurePage,
+    TransformerPage, TransformerRecapPage, WireSectionsPage,
     LossesPage, SnubberPage, OutputStagePage,
 )
-from app.tabs.formula_ref   import FormulaRefTab
+from app.tabs.formula_ref_web import FormulaRefTabWeb as FormulaRefTab
 from app.tabs.component_db  import ComponentDbTab
 
 
@@ -47,13 +47,13 @@ from app.tabs.component_db  import ComponentDbTab
 
 NAV_ITEMS = [
     ("Input specifications",  InputSpecsPage),
-    ("Input stage",           InputStagePage),
+    ("Pre-design section",    PreDesignPage),
     ("Switching structure",   StructurePage),
     ("Transformer",           TransformerPage),
-    ("Current waveforms",     WaveformsPage),
+    ("Transformer recap",     TransformerRecapPage),
     ("Wire sections",         WireSectionsPage),
     ("Losses",                LossesPage),
-    ("Snubber",               SnubberPage),
+    ("Clamp circuit",         SnubberPage),
     ("Output stage",          OutputStagePage),
 ]
 
@@ -73,7 +73,12 @@ class MainWindow(QMainWindow):
         # Central shared data model
         self.ds = FlybackState()
         self.res = FlybackResults()
+
+        from models.snubber_state import SnubberState, SnubberResults
+        self.snubber_ds = SnubberState()
+        self.snubber_res = SnubberResults()
         calc_inputPower(self.ds)   # seed computed values from defaults
+        calc_bulkCapacitance(self.res, self.ds)
 
         self._build_menu()
         self._build_central()
@@ -113,6 +118,23 @@ class MainWindow(QMainWindow):
         file_menu.addAction(act_save_as)
         file_menu.addSeparator()
         file_menu.addAction(act_quit)
+
+        # Edit
+        edit_menu = mb.addMenu("&Edit")
+        act_compile = QAction("Co&mpile", self)
+        act_compile.setShortcut("Ctrl+Shift+C")
+        act_compile.triggered.connect(self._compile_all)
+        edit_menu.addAction(act_compile)
+        
+        edit_menu.addSeparator()
+        
+        act_add_comp = QAction("Ajout d'un composant", self)
+        act_add_comp.triggered.connect(self._add_component)
+        edit_menu.addAction(act_add_comp)
+        
+        act_del_comp = QAction("Supprimer un composant", self)
+        act_del_comp.triggered.connect(self._delete_component)
+        edit_menu.addAction(act_del_comp)
 
         # View
         view_menu = mb.addMenu("&View")
@@ -189,7 +211,10 @@ class MainWindow(QMainWindow):
         self._pages: list[QWidget] = []
 
         for _, PageClass in NAV_ITEMS:
-            page = PageClass(self.ds)
+            if PageClass.__name__ == "SnubberPage":
+                page = PageClass(self.snubber_ds, self.snubber_res)
+            else:
+                page = PageClass(self.ds, self.res)
             self._pages.append(page)
             self._stack.addWidget(page)
 
@@ -224,8 +249,9 @@ class MainWindow(QMainWindow):
 
     def _refresh_status_bar(self):
         ds = self.ds
+        res = self.res
         self._sb_vbulk.setText(
-            f"V_bulk  {ds.v_bulk_min:.0f} – {ds.v_in_max:.0f} V")
+            f"V_bulk  {res.v_bulk_min_nH_calc:.0f} – {ds.v_in_max:.0f} V")
         self._sb_ipk.setText(f"I_pk  {ds.i_p_max:.2f} A")
         self._sb_lmag.setText(f"L_mag  {ds.Lp:.3f} mH")
         self._sb_eta.setText(f"η  {ds.eta*100:.0f} %")
@@ -244,7 +270,8 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(FormulaRefTab(),   "Formulas")
-        tabs.addTab(ComponentDbTab(),  "Components")
+        self._component_db_tab = ComponentDbTab()
+        tabs.addTab(self._component_db_tab,  "Components")
         self._info_dock.setWidget(tabs)
 
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._info_dock)
@@ -339,6 +366,42 @@ class MainWindow(QMainWindow):
     # About
     # ──────────────────────────────────────────────────────────────
 
+    def _compile_all(self):
+        from models.calc_engine import (
+            calc_inputPower, calc_bulkCapacitance, calc_preDesign_transformer,
+            calc_transformer, calc_flybackState, calc_wire_sections
+        )
+        from app.pages.pre_design import PreDesignPage
+
+        ds = self.ds
+        res = self.res
+
+        try:
+            calc_inputPower(ds)
+            calc_bulkCapacitance(res, ds)
+            if ds.c_bulk == 0:
+                ds.c_bulk = PreDesignPage.c_bulk.value * 1e-6
+                calc_preDesign_transformer(ds, res)
+            else: 
+                calc_preDesign_transformer(ds, res)
+            calc_transformer(ds, res)
+            calc_flybackState(ds, res)
+            calc_wire_sections(ds, res)
+        except Exception as e:
+            QMessageBox.warning(self, "Compilation Error", f"An error occurred during calculations:\n{e}")
+            return
+            
+        ds.notify("all")
+
+        # Refresh the current active page
+        idx = self._stack.currentIndex()
+        if idx >= 0:
+            page = self._stack.widget(idx)
+            if hasattr(page, "refresh"):
+                page.refresh()
+                
+        QMessageBox.information(self, "Compile Success", "All calculations finished successfully.")
+
     def _show_about(self):
         QMessageBox.about(
             self,
@@ -348,3 +411,33 @@ class MainWindow(QMainWindow):
             "Built with PyQt6 + Python.<br>"
             "LTSpice / PySpice simulation integration planned."
         )
+
+    def _add_component(self):
+        from app.widgets.component_dialogs import AddComponentDialog
+        dlg = AddComponentDialog(self)
+        if dlg.exec():
+            self._refresh_components()
+            
+    def _delete_component(self):
+        from app.widgets.component_dialogs import DeleteComponentDialog
+        dlg = DeleteComponentDialog(self)
+        if dlg.exec():
+            self._refresh_components()
+            
+    def _refresh_components(self):
+        if hasattr(self, "_component_db_tab"):
+            self._component_db_tab.refresh()
+            
+        for page in self._pages:
+            # If it's the transformer page, we might want to refresh its combos.
+            # We don't have a dedicated refresh_combos(), but _on_geom_changed("All") 
+            # will reconstruct the reference combo based on the current component DB.
+            if hasattr(page, "_cb_geom") and hasattr(page, "_on_geom_changed"):
+                # Save the currently selected ref if possible
+                current_ref = page._cb_ref.currentText()
+                page._on_geom_changed("All")
+                # Try to restore the selected ref
+                idx = page._cb_ref.findText(current_ref)
+                if idx >= 0:
+                    page._cb_ref.setCurrentIndex(idx)
+

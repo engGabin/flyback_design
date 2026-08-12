@@ -1,6 +1,6 @@
 
 from re import L
-from PyQt6.QtWidgets import QPushButton, QHBoxLayout, QFrame, QVBoxLayout
+from PyQt6.QtWidgets import QPushButton, QHBoxLayout, QFrame, QVBoxLayout, QMessageBox
 from PyQt6.QtCore    import Qt
 
 from app.widgets.common import PageBase, LabeledInput, ResultRow, SectionHeader
@@ -8,8 +8,8 @@ from models.calc_engine import *
 
 class InputSpecsPage(PageBase):
 
-    def __init__(self, ds, parent=None):
-        super().__init__(ds, title="Input specifications", parent=parent)
+    def __init__(self, ds, res, parent=None):
+        super().__init__(ds, res, title="Input specifications", parent=parent)
 
     def _build_ui(self):
         cl = self._content_layout
@@ -154,6 +154,37 @@ class InputSpecsPage(PageBase):
         cl.addWidget(results_frame)
 
         # ------------------------------------------------------------
+        # COMPUTED BULK CA  PACITANCE
+        # ------------------------------------------------------------
+        cl.addSpacing(20)
+
+        bulk_frame = QFrame()
+        bulk_frame.setObjectName("BulkContainer")
+        bulk_frame.setStyleSheet("""
+            QFrame#BulkContainer {
+                background-color: #273A56;
+                border-radius: 8px;
+                border: 1px solid #3E5C76;
+            }
+        """)
+        bulk_layout = QVBoxLayout(bulk_frame)
+        bulk_layout.setContentsMargins(20, 16, 20, 20)
+        
+        bulk_layout.addWidget(SectionHeader("Bulk capacitance"))
+
+        self._r_c_bulk_calc = ResultRow("Required bulk capacitance", "µF", decimals=2)
+        self._r_c_bulk_std = ResultRow("Standard bulk capacitance", "µF", decimals=1)
+        self._r_v_bulk_min = ResultRow("Bulk voltage min", "V", decimals=2)
+        self._r_v_bulk_min_nH = ResultRow("Minimum bulk voltage with hold-up", "V", decimals=2)
+
+        bulk_layout.addWidget(self._r_c_bulk_calc)
+        bulk_layout.addWidget(self._r_c_bulk_std)
+        bulk_layout.addWidget(self._r_v_bulk_min)
+        bulk_layout.addWidget(self._r_v_bulk_min_nH)
+
+        cl.addWidget(bulk_frame)
+
+        # ------------------------------------------------------------
         # APPLY BUTTON
         # ------------------------------------------------------------
         btn_row = QHBoxLayout()
@@ -162,7 +193,22 @@ class InputSpecsPage(PageBase):
         # C'est l'astuce classique en Qt pour aligner un bouton à droite.
         btn_row.addStretch()
         self._btn_apply = QPushButton("Apply and recalculate")
-        self._btn_apply.setFixedWidth(180)
+        self._btn_apply.setStyleSheet("""
+            QPushButton {
+                background-color: #3E5C76;
+                color: #F0EBD8;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: bold;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background-color: #4A6E8C;
+            }
+            QPushButton:pressed {
+                background-color: #273A56;
+            }
+        """)
         self._btn_apply.clicked.connect(self._save_to_state)
 
         # place le bouton à l'intérieur de la ligne horizontale (à droite du "ressort")
@@ -182,10 +228,20 @@ class InputSpecsPage(PageBase):
         self._f_sw.value    = ds.f_sw / 1e3         # stored as Hz
         self._d_max.value   = ds.D_max
         self.refresh()
+        
+    def showEvent(self, event):
+        super().showEvent(event)
+        try:
+            calc_inputPower(self.ds, self.res)
+            calc_bulkCapacitance(self.res, self.ds)
+            self.refresh()
+        except Exception:
+            pass
 
     # ---------------------------------------------------------------- #
     def _save_to_state(self):
         ds = self.ds
+        rs = self.res
         ds.vac_min = self._vac_min.value
         ds.vac_max = self._vac_max.value
         ds.f_line  = self._f_line.value
@@ -200,13 +256,19 @@ class InputSpecsPage(PageBase):
         ds.Nh      = self._n_H.value
         ds.f_sw    = self._f_sw.value * 1e3
         ds.D_max   = self._d_max.value
-        calc_inputPower(ds)
+        try:
+            calc_inputPower(ds)
+            calc_bulkCapacitance(rs, ds)
+        except Exception as e:
+            QMessageBox.warning(self, "Calculation Error", f"An error occurred during calculation:\n{e}")
+            return
         ds.notify("input_specs")
         self.refresh()
 
     # ---------------------------------------------------------------- #
     def refresh(self):
         ds = self.ds
+        rs = self.res
         self._r_i_out1.set_value(ds.i_out1)
         self._r_i_out2.set_value(ds.i_out2)
         self._r_i_aux.set_value(ds.i_aux)
@@ -214,3 +276,8 @@ class InputSpecsPage(PageBase):
         self._r_p_in.set_value(ds.p_in)
         self._r_v_in_min.set_value(ds.v_in_min)
         self._r_v_in_max.set_value(ds.v_in_max)
+
+        self._r_c_bulk_calc.set_value(rs.c_bulk_calc * 1e6)
+        self._r_c_bulk_std.set_value(rs.c_bulk_std * 1e6)
+        self._r_v_bulk_min_nH.set_value(rs.v_bulk_min_nH_calc)
+        self._r_v_bulk_min.set_value(rs.v_bulk_min_calc)

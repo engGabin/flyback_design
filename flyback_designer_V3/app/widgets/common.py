@@ -35,7 +35,7 @@ class HLine(QFrame):
 class SectionHeader(QWidget):
     """Bold title + thin rule — visually groups related fields."""
 
-    def __init__(self, title: str, parent=None):
+    def __init__(self, title: str, center: bool = False, parent=None):
         super().__init__(parent)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -49,6 +49,9 @@ class SectionHeader(QWidget):
 
         # on force une hauteur minimale pour empêcher PyQt de couper le texte
         lbl.setMinimumHeight(22)
+
+        if center:
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         lay.addWidget(lbl)
         lay.addWidget(HLine())
@@ -199,7 +202,7 @@ class ResultRow(QWidget):
     [ label .............. ] [ bold value ] [ unit ]
     """
 
-    def __init__(self, label: str, unit: str = "", decimals: int = 3, parent=None):
+    def __init__(self, label: str, unit: str = "", decimals: int = 3, tooltip: str = "", parent=None):
         super().__init__(parent)
         self._decimals = decimals
 
@@ -211,6 +214,8 @@ class ResultRow(QWidget):
         self._lbl.setMinimumWidth(200)
         self._lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self._lbl.setStyleSheet("color: #748CAB;")
+        if tooltip:
+            self._lbl.setToolTip(tooltip)
 
         self._val = QLabel("—")
         self._val.setMinimumWidth(110)
@@ -223,7 +228,7 @@ class ResultRow(QWidget):
         self._unit.setMinimumWidth(48)
         self._unit.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self._unit.setStyleSheet("color: #748CAB; font-size: 11px;")
-
+            
         lay.addWidget(self._lbl)
         lay.addStretch()
         lay.addWidget(self._val)
@@ -256,9 +261,10 @@ class PageBase(QWidget):
       - refresh()    → called when upstream data changes (connected to signals)
     """
 
-    def __init__(self, ds, title: str = "", parent=None):
+    def __init__(self, ds, res, title: str = "", parent=None):
         super().__init__(parent)
         self.ds = ds
+        self.res = res
         self._title = title
 
         # Layout principal de la page

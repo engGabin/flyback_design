@@ -11,19 +11,18 @@ from PyQt6.QtCore    import Qt
 from PyQt6.QtGui     import QFont
 
 
-FORMULA_HTML = """
-<html>
+FORMULA_HTML = """<html>
 <head>
 <style>
-  body  { font-family: 'Segoe UI', sans-serif; font-size: 13px;
-          color: #2a2a2a; margin: 16px; }
-  h2    { font-size: 14px; font-weight: 600; color: #1a3a5c;
-          border-bottom: 1px solid #dde; padding-bottom: 4px; margin-top: 20px; }
-  h3    { font-size: 12px; font-weight: 600; color: #444; margin: 10px 0 4px; }
-  .eq   { font-family: 'Courier New', monospace; font-size: 12px;
-          background: #f4f6fa; border-left: 3px solid #4a80c4;
-          padding: 6px 10px; margin: 4px 0 8px; border-radius: 2px; }
-  .note { font-size: 11px; color: #666; margin: 0 0 8px 12px; }
+  body  { font-family: 'Segoe UI', sans-serif; font-size: 14px;
+          color: #F0EBD8; margin: 16px; }
+  h2    { font-size: 16px; font-weight: bold; color: #748CAB;
+          border-bottom: 2px solid #3E5C76; padding-bottom: 6px; margin-top: 24px; }
+  h3    { font-size: 14px; font-weight: bold; color: #A9BECD; margin: 12px 0 6px; }
+  .eq   { font-family: 'Courier New', monospace; font-size: 14px;
+          background: #273A56; border-left: 4px solid #748CAB;
+          padding: 8px 12px; margin: 6px 0 12px; border-radius: 4px; color: #F0EBD8; }
+  .note { font-size: 12px; color: #8FACC0; font-style: italic; margin: 0 0 10px 14px; }
 </style>
 </head>
 <body>
@@ -121,19 +120,19 @@ FORMULA_HTML = """
 <h3>Output diode losses</h3>
 <div class="eq">P_diode = V_f × I_out</div>
 
-<h2>8 — RCD Snubber</h2>
+<h2>8 — RCD Clamp Circuit</h2>
 
-<h3>Primary switch voltage without snubber</h3>
+<h3>Primary switch voltage without clamp</h3>
 <div class="eq">V_DS_peak = V_bulk_max + V_OR + ΔV_spike</div>
 <div class="note">ΔV_spike due to leakage inductance L_lk ringing with C_DS</div>
 
 <h3>Clamp voltage target</h3>
 <div class="eq">V_clamp = 1.3 × (V_bulk_max + V_OR)</div>
 
-<h3>Snubber capacitor</h3>
+<h3>Clamp capacitor</h3>
 <div class="eq">C_snub ≥ L_lk × I_pk² / (V_clamp − V_OR)²</div>
 
-<h3>Snubber resistor</h3>
+<h3>Clamp resistor</h3>
 <div class="eq">R_snub = V_clamp² / P_snub   (P_snub ≈ ½ × L_lk × I_pk² × f_sw)</div>
 
 <h2>9 — Output stage</h2>
@@ -148,8 +147,7 @@ FORMULA_HTML = """
 <div class="eq">ΔV_ESR = ESR × I_pk_sec</div>
 
 </body>
-</html>
-"""
+</html>"""
 
 
 class FormulaRefTab(QWidget):

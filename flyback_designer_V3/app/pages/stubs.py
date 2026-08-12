@@ -15,8 +15,8 @@ def _make_stub(title: str, description: str):
     """Factory that returns a minimal stub PageBase subclass."""
 
     class _StubPage(PageBase):
-        def __init__(self, ds, parent=None):
-            super().__init__(ds, title=title, parent=parent)
+        def __init__(self, ds, res, parent=None):
+            super().__init__(ds, res, title=title, parent=parent)
 
         def _build_ui(self):
             lbl = QLabel(description)
@@ -36,13 +36,6 @@ def _make_stub(title: str, description: str):
 # One stub per unimplemented page
 # ------------------------------------------------------------------ #
 
-InputStagePage = _make_stub(
-    "Input stage",
-    "Sizing of the input bridge rectifier, bulk capacitor (hold-up), "
-    "and balancing / bleed resistors.\n\n"
-    "Inputs: V_bulk_min/max (from Input Specs), t_hold, V_ripple_target.\n"
-    "Outputs: C_in [µF], C_in voltage rating, I_in_rms, bleed resistor R [kΩ].",
-)
 
 StructurePage = _make_stub(
     "Switching structure",
@@ -53,13 +46,7 @@ StructurePage = _make_stub(
     "Helps compare V_DS rating, gate drive requirements, and BOM impact.",
 )
 
-TransformerPage = _make_stub(
-    "Transformer design",
-    "DCM flyback transformer sizing:\n"
-    "  L_mag, turns ratio n=Np/Ns, primary turns Np, secondary turns Ns,\n"
-    "  core selection (Ae, Aw, AL), air gap l_gap, peak flux density B_max.\n\n"
-    "Will support core database lookup and Steinmetz loss estimation.",
-)
+
 
 WaveformsPage = _make_stub(
     "Current waveforms",

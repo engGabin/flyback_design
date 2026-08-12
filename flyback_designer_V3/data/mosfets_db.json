@@ -1,0 +1,44 @@
+[
+    {
+        "ref": "IPW90R120C3",
+        "v_ds": 900,
+        "rds_on": 120,
+        "package": "TO247",
+        "qg": 54
+    },
+    {
+        "ref": "IPW90R250C3",
+        "v_ds": 900,
+        "rds_on": 250,
+        "package": "TO247",
+        "qg": 29
+    },
+    {
+        "ref": "STW11NM80",
+        "v_ds": 800,
+        "rds_on": 420,
+        "package": "TO247",
+        "qg": 20
+    },
+    {
+        "ref": "IPD60R385C7",
+        "v_ds": 600,
+        "rds_on": 385,
+        "package": "TO252",
+        "qg": 8
+    },
+    {
+        "ref": "SPA07N65C3",
+        "v_ds": 650,
+        "rds_on": 570,
+        "package": "TO220",
+        "qg": 24
+    },
+    {
+        "ref": "FCH072N65S3",
+        "v_ds": 650,
+        "rds_on": 72,
+        "package": "TO247",
+        "qg": 175
+    }
+]

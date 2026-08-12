@@ -7,8 +7,7 @@ Browsable tables for:
   - MOSFETs (900/1000 V CoolMOS, SuperJunction)
   - Schottky diodes for output
 
-Data is loaded from data/cores_db.json and data/controllers_db.json.
-Currently shows placeholder tables; JSON loading to be added.
+Data is loaded from JSON files via ComponentManager.
 """
 
 from PyQt6.QtWidgets import (
@@ -18,43 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui  import QFont
 
-
-CORES_DATA = [
-    # ref,       Ae mm², Aw mm², Ve mm³,  AL nH/t², material
-    ("E25/13/7",  52,    62,   2500,   250, "N87"),
-    ("E30/15/7",  60,    115,  3400,   320, "N87"),
-    ("E32/16/9",  83,    130,  4700,   350, "N87"),
-    ("E36/18/11", 111,   175,  7200,   430, "N87"),
-    ("E42/20/15", 178,   240,  14000,  590, "N97"),
-    ("ETD29",     76,    100,  5470,   280, "N87"),
-    ("ETD34",     97.1,  123,  7740,   355, "N87"),
-    ("ETD39",     125,   177,  11500,  449, "N97"),
-    ("RM10",      96,    35,   5600,   1900,"N87"),
-]
-
-CONTROLLERS_DATA = [
-    # ref,             Manuf,     V_max V, pkg,    PSR, notes
-    ("ICE2QR4565G",  "Infineon", 800,  "DIP8",  True,  "StackFET, 65 kHz, 4 W OB"),
-    ("ICE5QR4780AG", "Infineon", 800,  "DIP8",  True,  "StackFET, 80 kHz, 5 W OB"),
-    ("VIPER35HD",    "ST",       800,  "DIP8",  True,  "StackFET, 60 kHz"),
-    ("VIPER35LD",    "ST",       800,  "SOP8",  True,  "StackFET, 60 kHz SMD"),
-    ("NCP1379",      "ON Semi",  600,  "SOP8",  False, "CRM/DCM, external MOSFET"),
-    ("LNK306P",      "PI",       700,  "DIP8",  True,  "LinkSwitch, 360 mA max"),
-    ("TEA1721",      "NXP",      800,  "DIP8",  False, "SSR, external MOSFET"),
-]
-
-MOSFETS_DATA = [
-    # ref,                 V_DS V, Rds_on mΩ, pkg,    Qg nC
-    ("IPW90R120C3",        900,   120,  "TO247",  54),
-    ("IPW90R250C3",        900,   250,  "TO247",  29),
-    ("STW11NM80",          800,   420,  "TO247",  20),
-    ("IPD60R385C7",        600,   385,  "TO252",  8),
-    ("SPA07N65C3",         650,   570,  "TO220",  24),
-    ("FCH072N65S3",        650,   72,   "TO247",  175),
-]
+from models.component_manager import ComponentManager
 
 
-def _make_table(headers: list[str], data: list[tuple]) -> QTableWidget:
+def _make_table(headers: list[str], data: list[dict]) -> QTableWidget:
     t = QTableWidget(len(data), len(headers))
     t.setHorizontalHeaderLabels(headers)
     t.verticalHeader().setVisible(False)
@@ -65,8 +31,15 @@ def _make_table(headers: list[str], data: list[tuple]) -> QTableWidget:
     t.horizontalHeader().setStretchLastSection(True)
 
     for r, row in enumerate(data):
-        for c, cell in enumerate(row):
-            item = QTableWidgetItem(str(cell))
+        # row is a dict now for all components
+        row_vals = list(row.values())
+        for c, cell in enumerate(row_vals):
+            # Format booleans nicely
+            if isinstance(cell, bool):
+                val_str = "Yes" if cell else "No"
+            else:
+                val_str = str(cell)
+            item = QTableWidgetItem(val_str)
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             t.setItem(r, c, item)
     return t
@@ -77,37 +50,53 @@ class ComponentDbTab(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(8, 8, 8, 8)
+        self.lay = QVBoxLayout(self)
+        self.lay.setContentsMargins(8, 8, 8, 8)
 
-        inner = QTabWidget()
-        lay.addWidget(inner)
-
-        # ── Cores ──────────────────────────────────────────────────
-        cores_tbl = _make_table(
-            ["Reference", "Ae (mm²)", "Aw (mm²)", "Ve (mm³)", "AL (nH/t²)", "Material"],
-            CORES_DATA
-        )
-        inner.addTab(cores_tbl, "Ferrite cores")
-
-        # ── Controllers ────────────────────────────────────────────
-        ctrl_tbl = _make_table(
-            ["Reference", "Manufacturer", "V_max (V)", "Package", "PSR", "Notes"],
-            CONTROLLERS_DATA
-        )
-        inner.addTab(ctrl_tbl, "Controllers")
-
-        # ── MOSFETs ────────────────────────────────────────────────
-        mos_tbl = _make_table(
-            ["Reference", "V_DS (V)", "Rds_on (mΩ)", "Package", "Qg (nC)"],
-            MOSFETS_DATA
-        )
-        inner.addTab(mos_tbl, "MOSFETs")
-
-        note = QLabel(
-            "Data is indicative. Always verify against manufacturer datasheet "
+        self.inner = QTabWidget()
+        self.lay.addWidget(self.inner)
+        
+        self.note = QLabel(
+            "Data is loaded from user database. Always verify against manufacturer datasheet "
             "before finalising component selection."
         )
-        note.setWordWrap(True)
-        note.setStyleSheet("color: #888; font-size: 11px; padding: 6px 0;")
-        lay.addWidget(note)
+        self.note.setWordWrap(True)
+        self.note.setStyleSheet("color: #888; font-size: 11px; padding: 6px 0;")
+        
+        self.refresh()
+
+    def refresh(self):
+        """Reload data from ComponentManager and rebuild the tables."""
+        # Clear existing tabs
+        while self.inner.count() > 0:
+            self.inner.removeTab(0)
+            
+        mgr = ComponentManager()
+        
+        # ── Cores ──────────────────────────────────────────────────
+        cores_data = mgr.get_components("cores")
+        cores_tbl = _make_table(
+            ["Ref", "Geom", "Ae (mm²)", "Aw (mm²)", "Ap (mm⁴)", "Ve (mm³)", "AL (nH/t²)", "le (mm)", "ln (mm)", "Weight (g)", "µ core", "Window (mm)", "Pv"],
+            cores_data
+        )
+        self.inner.addTab(cores_tbl, "Ferrite cores")
+
+        # ── Controllers ────────────────────────────────────────────
+        ctrl_data = mgr.get_components("controllers")
+        ctrl_tbl = _make_table(
+            ["Reference", "Manufacturer", "V_max (V)", "Package", "PSR", "Notes"],
+            ctrl_data
+        )
+        self.inner.addTab(ctrl_tbl, "Controllers")
+
+        # ── MOSFETs ────────────────────────────────────────────────
+        mos_data = mgr.get_components("mosfets")
+        mos_tbl = _make_table(
+            ["Reference", "V_DS (V)", "Rds_on (mΩ)", "Package", "Qg (nC)"],
+            mos_data
+        )
+        self.inner.addTab(mos_tbl, "MOSFETs")
+
+        # Make sure note is at the bottom (remove if already there, add again)
+        self.lay.removeWidget(self.note)
+        self.lay.addWidget(self.note)

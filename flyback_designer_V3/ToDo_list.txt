@@ -1,6 +1,6 @@
 - moyen de déterminer t_d selon la valeur de la capa pour pouvoir déterminer v_bulk_min dans la partie def 
     calc_preDesign_transformer(state: DesignState):
-- avoir la possibilité dans chaque partie de modifier les paramètres d'entrés et voir comment ca peut évoluer 
+X avoir la possibilité dans chaque partie de modifier les paramètres d'entrés et voir comment ca peut évoluer 
 X créer deux classes : 
     une classe pour les valeurs fixes finales 
     une classe pour les calculs 
@@ -10,11 +10,43 @@ X créer deux classes :
     créer une database avec matériaux et leurs coefficients associés 
 - rajouter le calculs des courants i_s2_... et i_aux_...
 - revoir calculs pour Daux, Saux_eff, car il peut y avoir des problèmes au niveau des courants (RMS trop petits)
+- ajouter les calculs de courant auxiliaires
+- penser à refaire la barre en bas de la fenêtre
+- calcul de la section de la partie auxiliaire
+- mettre à jour la partie visuel des calculs
+- ajouter une page pour pouvoir effectuer des calculs de manière général sur une alimentation flyback comme le fichier test excel
+- ajouter des photos dans le logiciel pour aider à la compréhension
 
+- penser à rajouter des commentaires pour expliquer chaque calcul et le choix des paramètres
 - export vers un fichier csv xml ou autre
+- dans Help, ajouter un document permettant une description claire et précise de comment utiliser l'application
+- ajouter mon nom partout
 
 VARIABLE A AJOUTER :
     X vor_calc
     X vds_on
 
+INPUT STAGE: 
+    - pouvoir rentrer une valeur de capa en F et que le logiciel comprenne l'unité et change ce qu'il y a écrit 
+    X changer de nom -> "Pre-design section"
 
+TRANSFORMER
+    X il faut penser à d'abord effectuer le calcul dans le "Pre-design section" avant de pouvoir effectuer le calcul du transfo sinon
+        on aura une erreur (voir ligne 142 du fichier transformer.py)
+    - il faudrait pouvoir gérer chaque erreur de calcul pour afficher une pop up affichant l'erreur mais que la fenêtre ne se ferme pas
+
+SNUBBER
+    - ajouter le texte sur ajout de Rdamp (10-47 Ω) sur l'image
+    - ajouter le texte sur ajout d'une capa en // de la TVS pour snubber (filtrer le bruit de découpage)
+
+EDIT
+    X bouton ajout composant -> ajout pop-up avec choix du composant et caractéristiques
+    X bouton supprimer composant -> supression du composant
+    - tester les deux fonctions ci-dessus
+
+-----------------------------------------------------------------------------------------------------------
+A RETENIR: 
+    - try/except pour améliorer la robustesse du code (éviter un crash de l'application en cas d'erreur 
+        de calcul)
+    - 
+    
