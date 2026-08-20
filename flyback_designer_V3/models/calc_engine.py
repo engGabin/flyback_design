@@ -381,14 +381,33 @@ def calc_output_capacitance(state: FlybackState, result: FlybackResults):
     """Calculates the output capacitance value.
     Arguments: FlybackResults (store results) - FlybackState (parameters)
     Returns: 
-        Results -> NONE
-        State -> C_out1, C_out2
+        Results -> C_out1, C_out2
+        State -> NONE
     """
-
-    state.C_out1 = 100 * (state.D_max * state.i_out1) / (state.delta_Vout1 * state.v_out1 * state.f_sw)
-    state.C_out2 = 100 * (state.D_max * state.i_out2) / (state.delta_Vout2 * state.v_out2 * state.f_sw)
+    if state.i_out1 == 0 or state.delta_Vout1 == 0 or state.v_out1 == 0 or state.f_sw == 0 or state.i_s1_max == 0:
+        result.C_out1 = 0
+        result.C_out1_esr = 0
+    else:
+        result.C_out1 = 10 * (state.D_max * state.i_out1) / (state.delta_Vout1/100 * state.v_out1 * state.f_sw)
+        result.C_out1_esr = (state.delta_Vout1/100) * (state.v_out1/state.i_s1_max)
+    if state.i_out2 == 0 or state.delta_Vout2 ==0 or state.v_out2 == 0 or state.f_sw == 0 or state.i_s2_max == 0:
+        result.C_out2 = 0
+        result.C_out2_esr = 0
+    else:
+        result.C_out2 = 10 * (state.D_max * state.i_out2) / (state.delta_Vout2/100 * state.v_out2 * state.f_sw)
+        result.C_out2_esr = (state.delta_Vout2/100) * (state.v_out2/state.i_s2_max)    
     
 
+def calc_output_voltages(state: FlybackState, result: FlybackResults):
+    """Calculates the output voltage ripple of the flyback converter.
+    Arguments: FlybackResults (store results) - FlybackState (parameters)
+    Returns: 
+        Results -> NONE
+        State -> ripple_v1_calc, ripple_v2_calc
+    """
+    state.ripple_v1_calc = (state.i_s1_max * state.C_out1_esr) + ((state.i_out1 * state.D_max) / (state.C_out1 * state.f_sw))
+    state.ripple_v2_calc = (state.i_s2_max * state.C_out2_esr) + ((state.i_out2 * state.D_max) / (state.C_out2 * state.f_sw))
+   
 
 def calc_pfe_losses(state: FlybackState, result: FlybackResults):
     """Calculates the core losses in the transformer.
@@ -440,63 +459,223 @@ def calc_pfe_losses(state: FlybackState, result: FlybackResults):
     state.Pfe = state.k * state.f_sw**state.alpha * state.B_ac**state.beta * state.Ve
 
 
-def calc_mosfet_losses(state: FlybackState, result: FlybackResults):
+
+def calc_mosfet_losses(state: FlybackState, result: FlybackResults, type: str="MOSFET"):
     """Calculates the MOSFET losses in the flyback converter.
     Arguments: FlybackResults (store results) - FlybackState (parameters)
     Returns: 
         Results -> NONE
         State -> P_cond, P_coss, P_sw_off, P_sw_on, P_mosfet
+        Returns -> String message indicating missing parameters or success
     """
-
-    vds_on = state.v_in_max 
+    
+    missing = []
+    
+    if type == "MOSFET":
+        rds_on = state.r_ds_on
+        MOS_toff = state.MOS_toff
+        MOS_ton = state.MOS_ton
+        MOS_Eoss = state.MOS_Eoss
+        MOS_coss = state.MOS_coss
+        if rds_on == 0: missing.append("Rds(on)")
+        if MOS_toff == 0: missing.append("t_off")
+        if MOS_ton == 0: missing.append("t_on")
+        if MOS_Eoss == 0 and MOS_coss == 0: missing.append("Eoss or Coss")
+    elif type == "IC":
+        rds_on = state.ctr_r_ds_on
+        MOS_toff = state.ctr_toff
+        MOS_ton = state.ctr_ton
+        MOS_Eoss = state.ctr_Eoss
+        MOS_coss = state.ctr_coss
+        if rds_on == 0: missing.append("Rds(on)")
+        if MOS_toff == 0: missing.append("t_off")
+        if MOS_ton == 0: missing.append("t_on")
+        if MOS_Eoss == 0 and MOS_coss == 0: missing.append("Eoss or Coss")
+    else: 
+        raise ValueError("Invalid component type")
+    
+    if state.i_p_rms == 0: missing.append("Primary RMS current (i_p_rms)")
+    if state.f_sw == 0: missing.append("Switching frequency (f_sw)")
+    if state.i_p_max == 0: missing.append("Peak primary current (i_p_max)")
+    
+    vds_on = state.v_bulk_min 
     vds_off = state.v_in_max + state.vor + (state.vor * 1.5)
+    i_off = state.i_p_max 
+    i_on = state.i_p_valley 
+    
+    P_cond = rds_on * state.i_p_rms**2
+    P_sw_off = 1/2 * vds_off * i_off * state.f_sw * MOS_toff
+    P_sw_on = 1/2 * vds_on * i_on * state.f_sw * MOS_ton
+    
+    if MOS_Eoss != 0:
+        P_coss = MOS_Eoss * state.f_sw
+    elif MOS_coss != 0 and MOS_Eoss == 0:
+        P_coss = 1/2 * MOS_coss * vds_off**2 * state.f_sw
+    else:
+        P_coss = 0
+    
+    if type == "MOSFET":
+        state.P_cond = P_cond
+        state.P_sw_on = P_sw_on
+        state.P_sw_off = P_sw_off
+        state.P_sw = P_sw_on + P_sw_off
+        state.P_coss = P_coss
+        state.P_mosfet = P_cond + P_sw_on + P_sw_off + P_coss
+    elif type == "IC":
+        state.P_cond_ctr = P_cond
+        state.P_sw_on_ctr = P_sw_on
+        state.P_sw_off_ctr = P_sw_off
+        state.P_sw_ctr = P_sw_on + P_sw_off
+        state.P_coss_ctr = P_coss
+        state.P_ctr = P_cond + P_sw_on + P_sw_off + P_coss
 
-    state.P_cond = state.r_ds_on * state.i_p_rms**2
-    state.P_coss = state.MOS_Eoss * state.f_sw
-    state.P_sw_off = vds_off * state.i_p_max * state.f_sw * state.MOS_toff
-    state.P_sw_on = vds_on * state.i_p_max * state.f_sw * state.MOS_ton
-
-    state.P_mosfet = state.P_cond + state.P_coss + state.P_sw_off + state.P_sw_on
-    state.MOS_Tj = state.MOS_r_th
+    if missing:
+        return f"Calculations performed, but the following values are missing for {type}:\n- " + "\n- ".join(missing)
+    else:
+        return f"All OK: No missing values for {type} losses calculations."
 
 
-def calc_diode_losses(state: FlybackState, result: FlybackResults):
+def calc_diode_losses(diode: str, type: str, state: FlybackState, result: FlybackResults):
     """Calculates the diode losses in the flyback converter.
     Arguments: FlybackResults (store results) - FlybackState (parameters)
     Returns: 
         Results -> 
         State -> 
     """
+    if diode == "D_out1":
+        v_F = state.V_F1
+        r_d = state.r_d1
+        i_s_rms = state.i_s1_rms
+        i_out = state.i_out1
+        v_rev = state.v_out1 + state.v_in_max * (state.Ns1/state.Np)
+        Q_rr = state.Qrr_d1
+        Cj = state.Cj_d1
+    elif diode == "D_out2":
+        v_F = state.V_F2
+        r_d = state.r_d2
+        i_s_rms = state.i_s2_rms
+        i_out = state.i_out2
+        v_rev = state.v_out2 + state.v_in_max * (state.Ns2/state.Np)
+        Q_rr = state.Qrr_d2
+        Cj = state.Cj_d2
+    else: 
+        raise ValueError("Diode not recognized")
 
+    missing = []
+    if v_F == 0: missing.append("V_F")
+    if r_d == 0: missing.append("r_d")
+    if i_s_rms == 0: missing.append("i_s_rms")
+    if i_out == 0: missing.append("i_out")
+    if v_rev == 0: missing.append("v_rev")
+    if type == "Standard" and Q_rr == 0: missing.append("Q_rr")
+    if type == "Ultra-fast" and Q_rr == 0: missing.append("Q_rr")
+    if type == "Schottky" and Cj == 0: missing.append("Cj")
+
+    P_cond = v_F * i_out + r_d * i_s_rms
+    if type == "Schottky": P_sw = 1/2 * Cj * v_rev**2 * state.f_sw
+    elif type == "Ultra-fast": P_sw = Q_rr * v_rev * state.f_sw
+    elif type == "Standard": P_sw = Q_rr * v_rev * state.f_sw 
+    else: raise ValueError("Diode type not recognized")
     
-def calc_capacitor_losses(state: FlybackState, result: FlybackResults):
+    P_diode = P_cond + P_sw
+
+    if diode == "D_out1":
+        state.P_cond_diode1 = P_cond
+        state.P_sw_diode1 = P_sw
+        state.P_diode1 = P_diode
+    elif diode == "D_out2":
+        state.P_cond_diode2 = P_cond
+        state.P_sw_diode2 = P_sw
+        state.P_diode2 = P_diode
+
+    if missing:
+        return f"Calculations performed, but the following values are missing for {diode}:\n- " + "\n- ".join(missing)
+    else:
+        return f"All OK: No missing values for {diode} losses calculations."
+
+
+def calc_capacitor_losses(capa: str, state: FlybackState, result: FlybackResults):
     """Calculates the capacitor losses in the flyback converter.
     Arguments: FlybackResults (store results) - FlybackState (parameters)
     Returns: 
         Results -> 
         State -> 
     """
-    # -------------------------------------------------------
-    # Output capacitor losses 
-    # -------------------------------------------------------
-    nbr_cout1_para = 2
-    nbr_cout2_para = 2
+    if capa == "C1_out1":
+        C_esr = getattr(state, "C1_out1_ESR", 0.0)
+        i_c_rms = state.i_s1_ac
+    elif capa == "C2_out1":
+        C_esr = getattr(state, "C2_out1_ESR", 0.0)
+        i_c_rms = state.i_s1_ac
+    elif capa == "C1_out2":
+        C_esr = getattr(state, "C1_out2_ESR", 0.0)
+        i_c_rms = state.i_s2_ac
+    elif capa == "C2_out2":
+        C_esr = getattr(state, "C2_out2_ESR", 0.0)
+        i_c_rms = state.i_s2_ac
+    elif capa == "C_bulk":
+        C_esr = state.C_bulk_esr
+        i_in_avg = state.p_out_total / (state.eta * state.v_in_min)
+        i_c_rms = math.sqrt(state.i_p_rms**2 - i_in_avg**2)
+    elif capa == "C_snubber":
+        C_esr = state.C_snub_esr
+        ts = (state.L_leak * state.i_p_max) / (state.V_clamp - state.vor)
+        i_c_rms = state.i_p_max * math.sqrt((ts * state.f_sw) / (3))
+    else:
+        raise ValueError("Capacitor not recognized")
 
-    i_c_out1_rms = math.sqrt((state.i_s1_rms**2 - state.i_out1**2))
-    i_c_out2_rms = math.sqrt((state.i_s2_rms**2 - state.i_out2**2))
-    P_c_out1 = state.ESR1 * (i_c_out1_rms/nbr_cout1_para)**2
-    P_c_out2 = state.ESR2 * (i_c_out2_rms/nbr_cout2_para)**2
+    missing = []
+    if C_esr == 0:
+        missing.append("C_esr (Equivalent Series Resistance)")
+    if i_c_rms == 0:
+        missing.append("RMS Current (i_c_rms)")
 
-    # -------------------------------------------------------
-    # Bulk capacitor losses 
-    # -------------------------------------------------------
-    nbr_cbulk_para = 2
-    kf_bf = 1
-    kf_hf = 2.5
+    P_capa = C_esr * i_c_rms**2
 
-    # i_cin_bf = i_in * math.sqrt((2 / (3 * state.f_line * result.t_c_calc)))
-    # i_cin_hf = math.sqrt((state.i_p_rms**2 - i_cin_bf**2))
-    # i_cbulk_rms = math.sqrt((i_cin_bf/kf_bf)**2 + (i_cin_hf/kf_hf)**2)
+    if capa == "C1_out1":
+        state.P_c1_out1 = P_capa
+    elif capa == "C2_out1":
+        state.P_c2_out1 = P_capa
+    elif capa == "C1_out2":
+        state.P_c1_out2 = P_capa
+    elif capa == "C2_out2":
+        state.P_c2_out2 = P_capa
+    elif capa == "C_bulk":
+        state.P_c_bulk = P_capa
+    elif capa == "C_snubber":
+        setattr(state, "P_snubber", P_capa)
 
-    i_cbulk_rms = math.sqrt((state.i_p_rms**2 - state.i_p_avg**2))
-    state.P_c_bulk = state.ESR_bulk * (i_cbulk_rms/nbr_cbulk_para)**2
+    if missing:
+        return f"Calculations performed, but the following values are missing for {capa}:\n- " + "\n- ".join(missing)
+    else:
+        return f"All OK: No missing values for {capa} losses calculations."
+
+def snubber_losses(state: FlybackState, result: FlybackResults):
+    """Calculates the snubber losses in the flyback converter.
+    Arguments: FlybackResults (store results) - FlybackState (parameters)
+    Returns: 
+        Results -> 
+        State -> 
+    """
+
+    missing = []
+    if state.L_leak == 0:
+        missing.append("L_leak")
+    if state.i_p_max == 0:
+        missing.append("i_p_max")
+    if state.f_sw == 0:
+        missing.append("f_sw")
+    if state.V_clamp == 0:
+        missing.append("V_clamp")
+    if state.vor == 0:
+        missing.append("vor")
+
+    if missing:
+        raise ValueError("Unable to calculate snubber losses. Please provide: \n- " + "\n- ".join(missing))
+    
+    P_snubber = 1/2 * state.L_leak * state.i_p_max**2 * state.f_sw * (state.V_clamp / (state.V_clamp - state.vor))
+
+    return P_snubber
+
+    
+    

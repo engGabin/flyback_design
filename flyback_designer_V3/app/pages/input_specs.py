@@ -49,6 +49,10 @@ class InputSpecsPage(PageBase):
             "Output voltage 1", "V",
             min_val=0, max_val=100, decimals=1, default=12.0,
             tooltip="Output voltage of winding 1")
+        self._delta_Vout1 = LabeledInput(
+            "Output voltage ripple 1", "%",
+            min_val=0, max_val=100, decimals=2, default=1.0,
+            tooltip="Output voltage ripple of winding 1")
         self._p_out2 = LabeledInput(
             "Output power 2", "W",
             min_val=0, max_val=50, decimals=1, default=0.0,
@@ -57,6 +61,10 @@ class InputSpecsPage(PageBase):
             "Output voltage 2", "V",
             min_val=0, max_val=100, decimals=1, default=0.0,
             tooltip="Output voltage of winding 2")
+        self._delta_Vout2 = LabeledInput(
+            "Output voltage ripple 2", "%",
+            min_val=0, max_val=100, decimals=2, default=1.0,
+            tooltip="Output voltage ripple of winding 2")
         self._p_aux = LabeledInput(
             "Auxiliary power", "W",
             min_val=0, max_val=50, decimals=1, default=0.0,
@@ -72,8 +80,10 @@ class InputSpecsPage(PageBase):
 
         cl.addWidget(self._p_out)
         cl.addWidget(self._v_out)
+        cl.addWidget(self._delta_Vout1) 
         cl.addWidget(self._p_out2)
         cl.addWidget(self._v_out2)
+        cl.addWidget(self._delta_Vout2)
         cl.addWidget(self._p_aux)
         cl.addWidget(self._v_aux)
         cl.addWidget(self._eta)
@@ -247,8 +257,10 @@ class InputSpecsPage(PageBase):
         ds.f_line  = self._f_line.value
         ds.p_out1   = self._p_out.value
         ds.v_out1   = self._v_out.value
+        ds.delta_Vout1 = self._delta_Vout1.value
         ds.p_out2   = self._p_out2.value
         ds.v_out2   = self._v_out2.value
+        ds.delta_Vout2 = self._delta_Vout2.value
         ds.p_aux   = self._p_aux.value
         ds.v_aux   = self._v_aux.value
         ds.eta     = self._eta.value / 100.0

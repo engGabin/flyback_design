@@ -10,7 +10,7 @@ Layout:
   │  (nav tree)   │   (design pages)            │
   │               │                             │
   ├───────────────┴─────────────────────────────┤
-  │  Status bar   (efficiency · Vbulk · Ipk)   │
+  │  Status bar   (efficiency · Vbulk · Ipk)    │
   └─────────────────────────────────────────────┘
 
   Info tabs (Formula ref, Component DB) open in a floating QDockWidget.
@@ -293,6 +293,8 @@ class MainWindow(QMainWindow):
 
         def _refresh_all():
             for page in self._pages:
+                if hasattr(page, "_load_from_state"):
+                    page._load_from_state()
                 if hasattr(page, "refresh"):
                     page.refresh()
             self._refresh_status_bar()

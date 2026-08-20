@@ -45,6 +45,8 @@ class FlybackState:
     v_bulk_min: float = 0.0        # minimum bulk voltage based on the voltage drop across a capacitor
     v_bulk_min_nH: float = 0.0     # minimum bulk voltage based on the voltage drop across a capacitor with hold-up
     c_bulk: float = 0.0            # Input bulk capacitor [F]
+    C_bulk_esr: float = 0.0        # Input bulk capacitor ESR [Ohm]
+    num_c_bulk_series: int = 1     # Number of bulk capacitors in series
 
     # ========================================================
     # 3. SWITCHING STRUCTURE
@@ -52,14 +54,7 @@ class FlybackState:
     # "stackfet" | "driver_ext" | "ic_only"
     structure_type: str = "stackfet"
     V_mosfet:       float = 1000.0  # V  — MOSFET voltage rating
-    controller_ref: str   = ""      # e.g. "ICE2QR4565G"
-    mosfet_ref:     str   = ""      # e.g. "IPW90R120C3"
     vds_on: float = 0.0             # voltage across the primary switch when it is on
-    r_ds_on: float = 0.62          # ON resistance of the primary switch [Ohm]
-    MOS_Eoss: float = 0.0
-    MOS_r_th: float = 0.0
-    MOS_ton: float = 0.0
-    MOS_toff: float = 0.0
 
     # ========================================================
     # 4. PRE-DESIGN CHOICES 
@@ -93,7 +88,7 @@ class FlybackState:
     Lp: float = 0.0  
     Lp_real: float = 0.0  
     vor: float = 0.0                # reflected voltage on the primary side
-    B_max_real: float = 0.0              # maximum flux density
+    B_max_real: float = 0.0         # maximum flux density
     AeAw_calc: float = 0.0          # area product
     Np_Ns1: float = 0.0             # turns ratio primary to secondary 1
     Np_Ns2: float = 0.0             # turns ratio primary to secondary 2
@@ -147,10 +142,7 @@ class FlybackState:
     i_s1_valley: float = 0.0        # secondary current valley
     delta_i_s1: float = 0.0         # secondary current ripple
     i_s1_dc: float = 0.0            # DC component of the secondary current
-    i_s1_ac: float = 0.0            # AC component of the secondary current 
-    i_out1: float = 0.0            # output current 1
-    i_out2: float = 0.0            # output current 2
-    i_aux: float = 0.0             # auxiliary output current   
+    i_s1_ac: float = 0.0            # AC component of the secondary current   
 
     # ========================================================
     # 10. WIRE SELECTION (user + computed)
@@ -226,14 +218,35 @@ class FlybackState:
     P_sw_on: float = 0.0                # W — Switching losses - turn on (MOSFET)
     P_mosfet: float = 0.0               # W - Total losses of the MOSFET
     MOS_Tj: float = 0.0                 # °C - Junction temperature (<150°C)
+
+    # IC losses
+    P_cond_ctr: float = 0.0             # W — conduction losses (IC)
+    P_sw_off_ctr: float = 0.0           # W — Switching losses - turn off (IC)
+    P_sw_on_ctr: float = 0.0            # W — Switching losses - turn on (IC)
+    P_sw_ctr: float = 0.0               # W — Switching losses (IC)
+    P_coss_ctr: float = 0.0             # W — Coss losses (IC)
+    P_ctr: float = 0.0                  # W - Total losses of the IC
+    CTR_Tj: float = 0.0                 # °C - Junction temperature (<150°C)
     
-    # Diodes losses
-    P_diode:     float = 0.0            # W — output diode losses
+    # Output diodes losses
+    P_cond_diode1: float = 0.0          # W — output diode conduction losses 1
+    P_cond_diode2: float = 0.0          # W — output diode conduction losses 2
+    P_sw_diode1: float = 0.0            # W — output diode switching losses 1
+    P_sw_diode2: float = 0.0            # W — output diode switching losses 2
+    P_diode1: float = 0.0               # W — output diode 1 total losses
+    P_diode2: float = 0.0               # W — output diode 2 total losses
+    P_diode_total: float = 0.0          # W — output diode total losses
 
     # Capacitors losses
-    P_c_out1: float = 0.0
-    P_c_out2: float = 0.0
-    P_c_bulk: float = 0.0
+    P_c1_out1: float = 0.0              # W — output 1 capacitor 1 losses
+    P_c2_out1: float = 0.0              # W — output 1 capacitor 2 losses
+    P_c1_out2: float = 0.0              # W — output 2 capacitor 1 losses
+    P_c2_out2: float = 0.0              # W — output 2 capacitor 2 losses
+    P_c_bulk: float = 0.0               # W — bulk capacitor losses
+    
+    # Snubber losses
+    P_sn_diode: float = 0.0             # W - snubber diode losses
+    P_snubber: float = 0.0              # W — snubber losses
 
     P_total_loss:float = 0.0            # W — total estimated losses
     eta_actual:  float = 0.0            # — — actual efficiency estimate
@@ -243,6 +256,7 @@ class FlybackState:
     # ========================================================
     V_clamp:     float = 0.0    # V  — clamp voltage
     C_snub:      float = 0.0    # nF — snubber capacitor
+    C_snub_esr:  float = 0.0    # Ω — snubber ESR
     R_snub:      float = 0.0    # kΩ — snubber resistor
     P_snub:      float = 0.0    # W  — snubber dissipation
     V_spike_est: float = 0.0    # V  — estimated spike without snubber
@@ -251,15 +265,18 @@ class FlybackState:
     # ========================================================
     # 13. OUTPUT STAGE (user + computed) 
     # ========================================================
-    v_F: float = 0.7                # V  — output diode forward voltage
-    I_diode_avg: float = 0.0        # A  — average diode current
-    diode_ref:   str   = ""
+    enable_out2: bool = False       # whether output 2 is enabled
+    v_F: float = 0.7                # V  — output diode forward voltage 1
+
     C_out1:       float = 0.0       # µF — output capacitor 1
     C_out1_esr:   float = 0.0       # mΩ — output cap ESR 1
-    delta_Vout1:    float = 0.0     # %  — output voltage ripple 1
+    delta_Vout1:    float = 1.0     # %  — output voltage ripple 1
+    ripple_v1_calc: float = 0.0     # %  — output voltage ripple 1 (calc)
+
     C_out2:       float = 0.0       # µF — output capacitor 2
     C_out2_esr:   float = 0.0       # mΩ — output cap ESR 2
-    delta_Vout2:    float = 0.0     # %  — output voltage ripple 2
+    delta_Vout2:    float = 1.0     # %  — output voltage ripple 2
+    ripple_v2_calc: float = 0.0     # %  — output voltage ripple 2 (calc)
 
     has_postfilter: bool = False
     L_pf:        float = 0.0    # µH — post-filter inductance
@@ -268,7 +285,86 @@ class FlybackState:
     # ========================================================
     # DATASHEET PARAMETERS
     # ========================================================
-    cap_ESR: float = 0.0 
+
+    # MOSFET
+    mosfet_ref:     str   = ""      # e.g. "IPW90R120C3"
+    MOS_vds_max: float = 950.0      # Maximal voltage allowed by the mosfet 
+    r_ds_on: float = 1.2            # ON resistance of the primary switch [Ohm]
+    MOS_Eoss: float = 1.3*1e-6      # Eoss of the primary switch [J]
+    MOS_coss: float = 7.0*1e-12     # Coss of the primary switch [F]
+    MOS_ton: float = 7.0*1e-9       # ton of the primary switch [s]
+    MOS_toff: float = 36*1e-9       # toff of the primary switch [s]
+    MOS_kt100: float = 0.0
+    MOS_r_th: float = 0.0           # Rth of the primary switch [K/W]
+    MOS_Rthjc: float = 17.41        # Thermal resistance of the primary switch junction-case
+    MOS_Rthja: float = 35           # Thermal resistance of the primary switch junction-ambient
+    MOS_Rthcs: float = 0.0          # Thermal resistance of the primary switch case-sink
+    MOS_Rthsa: float = 0.0          # Thermal resistance of the primary switch sink-ambient
+
+    # ---------------------------------------------------------
+    # Controller
+    controller_ref: str   = ""      # e.g. "ICE2QR4565G"
+    ctr_vds_max: float = 0.0        # Maximal voltage allowed by the controller
+    ctr_r_ds_on: float = 0.0        # ON resistance of the controller's MOSFET [Ohm]
+    ctr_Eoss: float = 0.0           # Eoss of the controller's MOSFET [J]
+    ctr_coss: float = 0.0           # Coss of the controller's MOSFET [F]
+    ctr_r_th: float = 0.0           # Rth of the controller's MOSFET [K/W]
+    ctr_ton: float = 0.0            # ton of the controller's MOSFET [s]
+    ctr_toff: float = 0.0           # toff of the controller's MOSFET [s]
+    ctr_kt100: float = 0.0
+    ctr_Rthjc: float = 0.0          # Thermal resistance of the controller's MOSFET junction-case
+    ctr_Rthcs: float = 0.0          # Thermal resistance of the controller's MOSFET case-sink
+    ctr_Rthsa: float = 0.0          # Thermal resistance of the controller's MOSFET sink-ambient
+
+    # ---------------------------------------------------------
+    # Output diodes
+    output_diode1_ref:   str   = "" # reference of the diode
+    type_diode1: str = ""           # type of the diode (Ultra-fase, Schottcky or standard)
+    diode1: str = "D_out1"          # to know if it's the output diode 1, 2 or the auxiliary
+    V_F1: float = 0.7               # V  — output diode forward voltage 1
+    r_d1: float = 0.0               # Ω — output diode 1 resistance
+    Qrr_d1: float = 0.0             # nC — output diode 1 reverse recovery charge
+    Cj_d1: float = 0.0             # pF — output diode 1 junction capacitance
+
+    output_diode2_ref:   str   = ""
+    type_diode2: str = ""           # type of the diode (Ultra-fase, Schottcky or standard)
+    diode2: str = "D_out2"          # to know if it's the output diode 1, 2 or the auxiliary
+    V_F2: float = 0.7               # V  — output diode forward voltage 2
+    r_d2: float = 0.0               # Ω — output diode 2 resistance
+    Qrr_d2: float = 0.0            # nC — output diode 2 reverse recovery charge
+    Cj_d2: float = 0.0              # pF — output diode 2 junction capacitance
+
+    # Snubber diode
+    snubber_diode_ref: str = ""     # reference of the snubber diode
+    snubber_diode_type: str = ""    # type of the snubber diode (Ultra-fase, Schottcky or standard)
+    diode_sn: str = "D_sn"
+    V_F_sn: float = 0.7             # V  — snubber diode forward voltage
+    r_d_sn: float = 0.0             # Ω — snubber diode resistance
+    Qrr_d_sn: float = 0.0           # nC — snubber diode reverse recovery charge
+    Cj_d_sn: float = 0.0            # pF — snubber diode junction capacitance
+
+    # ---------------------------------------------------------
+    # Input capacitors 
+    C1_in: float = 0.0              # µF — first input capacitor
+    C1_in_ESR: float = 0.0          # Ω — first input capacitor ESR
+    C2_in: float = 0.0              # µF — second input capacitor
+    C2_in_ESR: float = 0.0          # Ω — second input capacitor ESR
+    
+    # Output capacitors
+    C1_out1: float = 0.0            # µF — first output capacitor 1
+    C1_out1_ESR: float = 0.0        # Ω — first output capacitor 1 ESR
+    C2_out1: float = 0.0            # µF — second output capacitor 1
+    C2_out1_ESR: float = 0.0        # Ω — second output capacitor 1 ESR
+    
+    C1_out2: float = 0.0            # µF — first output capacitor 2
+    C1_out2_ESR: float = 0.0        # Ω — first output capacitor 2 ESR
+    C2_out2: float = 0.0            # µF — second output capacitor 2
+    C2_out2_ESR: float = 0.0        # Ω — second output capacitor 2 ESR
+
+    # Snubber capacitor
+    C_sn: float = 0.0               # F
+    C_sn_ESR: float = 0.0           # Ω — snubber capacitor ESR
+    
   
     def __post_init__(self):
             """
@@ -451,12 +547,93 @@ class FlybackResults:
     # ========================================================
     # 13. OUTPUT STAGE
     # ========================================================
-
+    C_out1: float = 0.0            # F - Bulk capacitor
+    C_out2: float = 0.0            # F - Output capacitor
+    C_out1_esr: float = 0.0        # Ohm - Output capacitor ESR
+    C_out2_esr: float = 0.0        # Ohm - Output capacitor ESR
 
     # ========================================================
     # DATASHEET PARAMETERS
     # ========================================================
-    r_ds_on: float = 0.62          # ON resistance of the primary switch [Ohm]
+
+    # MOSFET
+    mosfet_ref:     str   = ""      # e.g. "IPW90R120C3"
+    MOS_vds_max: float = 950.0      # Maximal voltage allowed by the mosfet 
+    r_ds_on: float = 1.2            # ON resistance of the primary switch [Ohm]
+    MOS_Eoss: float = 1.3*1e-6      # Eoss of the primary switch [J]
+    MOS_coss: float = 7.0*1e-12     # Coss of the primary switch [F]
+    MOS_ton: float = 7.0*1e-9       # ton of the primary switch [s]
+    MOS_toff: float = 36*1e-9       # toff of the primary switch [s]
+    MOS_kt100: float = 0.0
+    MOS_r_th: float = 0.0           # Rth of the primary switch [K/W]
+    MOS_Rthjc: float = 17.41        # Thermal resistance of the primary switch junction-case
+    MOS_Rthja: float = 35           # Thermal resistance of the primary switch junction-ambient
+    MOS_Rthcs: float = 0.0          # Thermal resistance of the primary switch case-sink
+    MOS_Rthsa: float = 0.0          # Thermal resistance of the primary switch sink-ambient
+
+    # ---------------------------------------------------------
+    # Controller
+    controller_ref: str   = ""      # e.g. "ICE2QR4565G"
+    ctr_vds_max: float = 0.0        # Maximal voltage allowed by the controller
+    ctr_r_ds_on: float = 0.0        # ON resistance of the controller's MOSFET [Ohm]
+    ctr_Eoss: float = 0.0           # Eoss of the controller's MOSFET [J]
+    ctr_coss: float = 0.0           # Coss of the controller's MOSFET [F]
+    ctr_r_th: float = 0.0           # Rth of the controller's MOSFET [K/W]
+    ctr_ton: float = 0.0            # ton of the controller's MOSFET [s]
+    ctr_toff: float = 0.0           # toff of the controller's MOSFET [s]
+    ctr_kt100: float = 0.0
+    ctr_Rthjc: float = 0.0          # Thermal resistance of the controller's MOSFET junction-case
+    ctr_Rthcs: float = 0.0          # Thermal resistance of the controller's MOSFET case-sink
+    ctr_Rthsa: float = 0.0          # Thermal resistance of the controller's MOSFET sink-ambient
+
+    # ---------------------------------------------------------
+    # Output diodes
+    output_diode1_ref:   str   = "" # reference of the diode
+    type_diode1: str = ""           # type of the diode (Ultra-fase, Schottcky or standard)
+    diode1: str = "D_out1"          # to know if it's the output diode 1, 2 or the auxiliary
+    V_F1: float = 0.7               # V  — output diode forward voltage 1
+    r_d1: float = 0.0               # Ω — output diode 1 resistance
+    Qrr_d1: float = 0.0             # nC — output diode 1 reverse recovery charge
+    Cj_d1: float = 0.0             # pF — output diode 1 junction capacitance
+
+    output_diode2_ref:   str   = ""
+    type_diode2: str = ""           # type of the diode (Ultra-fase, Schottcky or standard)
+    diode2: str = "D_out2"          # to know if it's the output diode 1, 2 or the auxiliary
+    V_F2: float = 0.7               # V  — output diode forward voltage 2
+    r_d2: float = 0.0               # Ω — output diode 2 resistance
+    Qrr_d2: float = 0.0            # nC — output diode 2 reverse recovery charge
+    Cj_d2: float = 0.0              # pF — output diode 2 junction capacitance
+
+    # Snubber diode
+    snubber_diode_ref: str = ""     # reference of the snubber diode
+    snubber_diode_type: str = ""    # type of the snubber diode (Ultra-fase, Schottcky or standard)
+    diode_sn: str = "D_sn"
+    V_F_sn: float = 0.7             # V  — snubber diode forward voltage
+    r_d_sn: float = 0.0             # Ω — snubber diode resistance
+    Qrr_d_sn: float = 0.0           # nC — snubber diode reverse recovery charge
+    Cj_d_sn: float = 0.0            # pF — snubber diode junction capacitance
+
+    # ---------------------------------------------------------
+    # Input capacitors 
+    C1_in: float = 0.0              # µF — first input capacitor
+    C1_in_ESR: float = 0.0          # Ω — first input capacitor ESR
+    C2_in: float = 0.0              # µF — second input capacitor
+    C2_in_ESR: float = 0.0          # Ω — second input capacitor ESR
+    
+    # Output capacitors
+    C1_out1: float = 0.0            # µF — first output capacitor 1
+    C1_out1_ESR: float = 0.0        # Ω — first output capacitor 1 ESR
+    C2_out1: float = 0.0            # µF — second output capacitor 1
+    C2_out1_ESR: float = 0.0        # Ω — second output capacitor 1 ESR
+    
+    C1_out2: float = 0.0            # µF — first output capacitor 2
+    C1_out2_ESR: float = 0.0        # Ω — first output capacitor 2 ESR
+    C2_out2: float = 0.0            # µF — second output capacitor 2
+    C2_out2_ESR: float = 0.0        # Ω — second output capacitor 2 ESR
+
+    # Snubber capacitor
+    C_sn: float = 0.0               # F
+    C_sn_ESR: float = 0.0           # Ω — snubber capacitor ESR
   
     def __post_init__(self):
             """

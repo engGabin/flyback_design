@@ -9,9 +9,11 @@ Provides:
   - PageBase       : base class every design page should inherit from
 """
 
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QDoubleSpinBox, QHBoxLayout, QVBoxLayout,
-    QFrame, QSizePolicy, QSpinBox, QScrollArea
+    QFrame, QSizePolicy, QSpinBox, QScrollArea, QLineEdit, QComboBox
 )
 from PyQt6.QtCore    import Qt, pyqtSignal
 from PyQt6.QtGui     import QFont
@@ -131,6 +133,125 @@ class LabeledInput(QWidget):
 
     def set_enabled(self, enabled: bool):
         self._spin.setEnabled(enabled)
+
+
+# --------------------------------------------------------------------
+# Text input variant
+# --------------------------------------------------------------------
+
+class LabeledTextInput(QWidget):
+    """
+    One row: [label .............. ] [ lineedit ] [ unit ]
+    """
+
+    text_changed = pyqtSignal(str)
+
+    def __init__(
+        self,
+        label: str,
+        unit: str = "",
+        default: str = "",
+        tooltip: str = "",
+        parent=None,
+    ):
+        super().__init__(parent)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 2, 0, 2)
+        lay.setSpacing(8)
+
+        self._lbl = QLabel(label)
+        self._lbl.setMinimumWidth(200)
+        self._lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        if tooltip:
+            self._lbl.setToolTip(tooltip)
+
+        self._lineedit = QLineEdit()
+        self._lineedit.setText(default)
+        self._lineedit.setFixedWidth(110)
+        self._lineedit.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._lineedit.textChanged.connect(self.text_changed.emit)
+
+        self._unit = QLabel(unit)
+        self._unit.setMinimumWidth(48)
+        self._unit.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self._unit.setStyleSheet("color: #748CAB; font-size: 11px;")
+
+        lay.addWidget(self._lbl)
+        lay.addStretch()
+        lay.addWidget(self._lineedit)
+        lay.addWidget(self._unit)
+
+    @property
+    def text(self) -> str:
+        return self._lineedit.text()
+
+    @text.setter
+    def text(self, v: str):
+        self._lineedit.blockSignals(True)
+        self._lineedit.setText(v)
+        self._lineedit.blockSignals(False)
+
+    def set_enabled(self, enabled: bool):
+        self._lineedit.setEnabled(enabled)
+
+# --------------------------------------------------------------------
+# ComboBox variant
+# --------------------------------------------------------------------
+
+class LabeledComboBox(QWidget):
+    """
+    One row: [label .............. ] [ combobox ]
+    """
+
+    current_text_changed = pyqtSignal(str)
+
+    def __init__(
+        self,
+        label: str,
+        items: list[str],
+        default: str = "",
+        tooltip: str = "",
+        parent=None,
+    ):
+        super().__init__(parent)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 2, 0, 2)
+        lay.setSpacing(8)
+
+        self._lbl = QLabel(label)
+        self._lbl.setMinimumWidth(200)
+        self._lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        if tooltip:
+            self._lbl.setToolTip(tooltip)
+
+        self._combo = QComboBox()
+        self._combo.addItems(items)
+        if default in items:
+            self._combo.setCurrentText(default)
+        self._combo.setFixedWidth(110)
+        self._combo.currentTextChanged.connect(self.current_text_changed.emit)
+
+        # To align with LabeledInput which has a unit
+        self._unit_spacer = QLabel("")
+        self._unit_spacer.setMinimumWidth(48)
+
+        lay.addWidget(self._lbl)
+        lay.addStretch()
+        lay.addWidget(self._combo)
+        lay.addWidget(self._unit_spacer)
+
+    @property
+    def current_text(self) -> str:
+        return self._combo.currentText()
+
+    @current_text.setter
+    def current_text(self, v: str):
+        self._combo.blockSignals(True)
+        self._combo.setCurrentText(v)
+        self._combo.blockSignals(False)
+
+    def set_enabled(self, enabled: bool):
+        self._combo.setEnabled(enabled)
 
 
 # --------------------------------------------------------------------

@@ -44,6 +44,9 @@ EDIT
     X bouton supprimer composant -> supression du composant
     - tester les deux fonctions ci-dessus
 
+LOSSES DIODE
+    - il faudrait pouvoir mettre les valeurs à 0 quand des données sont manquantes     
+
 -----------------------------------------------------------------------------------------------------------
 A RETENIR: 
     - try/except pour améliorer la robustesse du code (éviter un crash de l'application en cas d'erreur 
