@@ -36,51 +36,6 @@ This separation ensures the software is robust, maintainable, and allows the cal
 
 ---
 
-## Files and folders Organization
-
-```text
-Flyback_Design_App/
-│
-├── README.md                       # This presentation document
-├── requirements.txt                # Liste des dépedance python (PyQt6, etc.)
-├── main.py                         # point d'entrer de l'application
-│
-├── models/                         # MOTEUR DE CALCULS & VARIABLES
-│   ├── __init__.py                 # Permet d'identifier le dossier comme un package python
-│   ├── component_manager.py        # Gère l'ajout et la gestion des composants
-│   ├── flyback_states.py           # Contient les classes (FlybackState, FlybackResults) stockant les variables
-│   ├── snubber_state.py            # Contient les classes (snubber_state, snubber_results) stockant les variables relatives au snubber
-│   ├── camc_snubber.py             # Moteur contenant toutes les formules de conception du snubber
-│   └── calc_engine.py              # Moteur contenant toutes les formules de conception
-│
-├── app/                            # INTERFACE UTILISATEUR GRAPHIQUES 
-│   ├── __init__.py           
-│   ├── main_window.py              # Fenêtre principale, orchestre les menus et détient la mémoire globale
-│   ├── pages/                      # Dossier contenant les différentes pages de l'application
-│   │   ├── __init__.py       
-│   │   ├── input_specs.py          # Page des spécifications d'entrée
-│   │   ├── pre_design.py           # Page de pré-conception
-│   │   ├── structure.py            # Page avec la structure choisie (cascode, ...)
-│   │   ├── transformer.py          # Page pour le choix du transformateur et les premières indications
-│   │   ├── transformer_calc.py     # Page des calculs finaux du transformateur
-│   │   ├── losses.py               # Page des pertes
-│   │   ├── snubber.py              # Page du snubber
-│   │   └── output_stage.py         # Page de l'étage de sortie
-│   ├── tabs/                       # Onglets transversaux (Component database, Reference formulas)
-│   │   ├── __init__.py      
-│   │   ├── component_db.py         # Base de données des composants
-│   │   ├── formulas_ref.py         # Référence des formules
-│   │   └── formulas_ref_web.py     # Référence des formules en LaTeX
-│   └── widgets/              
-│       ├── __init__.py 
-│       ├── component_dialog.py     # fenetre de dialogue pour l'ajout de composants
-│       └── common.py               # "Boîte à outils": composants graphiques réutilisables
-│
-└── scratch/                        # Scripts utilitaires de développement
-    └── gen_web.py                  # Génère le site web de l'application
-```
-
-
 ## Folder structure
 
 ```text
